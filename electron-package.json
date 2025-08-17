@@ -1,0 +1,17 @@
+{
+  "name": "customers-desktop",
+  "version": "1.0.0",
+  "description": "Desktop Customer Management App",
+  "main": "electron/main.js",
+  "scripts": {
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "build-electron": "npm run build && electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0",
+    "concurrently": "^8.0.0",
+    "wait-on": "^7.0.0"
+  }
+}
