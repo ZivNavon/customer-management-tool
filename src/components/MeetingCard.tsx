@@ -263,7 +263,7 @@ export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
               Delete Meeting
             </h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete "{meeting.title}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{meeting.title}&quot;? This action cannot be undone.
             </p>
             <div className="flex justify-end space-x-4">
               <button
