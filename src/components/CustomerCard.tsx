@@ -112,12 +112,12 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
                 
                 {/* Quick Action Buttons */}
                 <div className="mt-2 flex space-x-2">
-                  {customer.contacts[0].email && (
+                  {customer.contacts?.[0]?.email && (
                     <button
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        window.open(`mailto:${customer.contacts[0].email}`, '_blank');
+                        window.open(`mailto:${customer.contacts?.[0]?.email}`, '_blank');
                       }}
                       className="flex items-center px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                     >
@@ -125,12 +125,12 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
                       Email
                     </button>
                   )}
-                  {customer.contacts[0].phone && (
+                  {customer.contacts?.[0]?.phone && (
                     <button
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        window.open(`tel:${customer.contacts[0].phone}`, '_blank');
+                        window.open(`tel:${customer.contacts?.[0]?.phone}`, '_blank');
                       }}
                       className="flex items-center px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
                     >

@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { meetingApi } from '@/lib/api';
 import { mockApi } from '@/lib/mockApi';
 import { AISummary } from './AISummary';
+import type { Meeting } from '@/types';
 import {
   CalendarIcon,
   ClockIcon,
@@ -17,27 +18,6 @@ import {
   ChevronUpIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
-
-interface Meeting {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  meeting_date: string;
-  duration?: number;
-  participants: string[];
-  screenshots: string[];
-  customerName: string;
-  customerId: string;
-  customer_id: string;
-  notes?: string;
-  action_items?: string[];
-  next_steps?: string;
-  customer?: {
-    name: string;
-  };
-}
 
 interface MeetingCardProps {
   meeting: Meeting;

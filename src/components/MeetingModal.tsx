@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { meetingApi, customerApi } from '@/lib/api';
 import { mockApi } from '@/lib/mockApi';
 import { AISummary } from './AISummary';
+import type { Meeting } from '@/types';
 import {
   XMarkIcon,
   CloudArrowUpIcon,
@@ -17,21 +18,6 @@ import {
   DocumentTextIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
-
-interface Meeting {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  meeting_date?: string;
-  duration?: number;
-  participants: string[];
-  notes?: string;
-  screenshots: (string | File)[];
-  action_items?: string[];
-  next_steps?: string;
-}
 
 interface MeetingModalProps {
   isOpen: boolean;

@@ -10,6 +10,7 @@ import { Header } from '@/components/Header';
 import { MeetingModal } from '@/components/MeetingModal';
 import { MeetingCard } from '@/components/MeetingCard';
 import { ContactsModal } from '@/components/ContactsModal';
+import type { Meeting, Customer } from '@/types';
 import { 
   PlusIcon, 
   ArrowLeftIcon, 
@@ -18,31 +19,6 @@ import {
   PhoneIcon,
   EnvelopeIcon
 } from '@heroicons/react/24/outline';
-
-interface Meeting {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  participants: string[];
-  screenshots: string[];
-  customerName: string;
-  customerId: string;
-}
-
-interface Customer {
-  id: string;
-  name: string;
-  logo?: string;
-  contacts: Array<{
-    id: string;
-    name: string;
-    role: string;
-    email: string;
-    phone: string;
-  }>;
-}
 
 export default function CustomerDetailPage() {
   const { t: _t } = useTranslation();
@@ -194,7 +170,7 @@ export default function CustomerDetailPage() {
             <div className="mt-6 pt-6 border-t border-gray-200">
               <h3 className="text-sm font-medium text-gray-700 mb-3">Key Contacts</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {customerData.contacts.slice(0, 6).map((contact: Customer['contacts'][0], index: number) => (
+                {customerData.contacts.slice(0, 6).map((contact: NonNullable<Customer['contacts']>[number], index: number) => (
                   <div key={index} className="bg-gray-50 rounded-md p-4 border border-gray-200">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
