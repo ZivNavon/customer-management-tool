@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { meetingApi, customerApi } from '@/lib/api';
@@ -15,16 +15,30 @@ import {
   ClockIcon,
   UserGroupIcon,
   DocumentTextIcon,
-  ChevronDownIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
+
+interface Meeting {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  meeting_date?: string;
+  duration?: number;
+  participants: string[];
+  notes?: string;
+  screenshots: (string | File)[];
+  action_items?: string[];
+  next_steps?: string;
+}
 
 interface MeetingModalProps {
   isOpen: boolean;
   onClose: () => void;
   customerId: string;
   customerName: string;
-  meeting?: any;
+  meeting?: Meeting;
 }
 
 interface MeetingFormData {
@@ -40,7 +54,7 @@ interface MeetingFormData {
 }
 
 export function MeetingModal({ isOpen, onClose, customerId, customerName, meeting }: MeetingModalProps) {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const queryClient = useQueryClient();
   const notesRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,7 +103,7 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
   // Load meeting data for editing
   useEffect(() => {
     if (meeting) {
-      const meetingDate = new Date(meeting.meeting_date);
+      const meetingDate = new Date(meeting.meeting_date || meeting.date);
       setFormData({
         title: meeting.title || generateDefaultTitle(customerName, meetingDate.toISOString().split('T')[0]),
         date: meetingDate.toISOString().split('T')[0],
@@ -111,6 +125,18 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
       setFormData(prev => ({ ...prev, title: newTitle }));
     }
   }, [formData.date, customerName, meeting]);
+
+  const addScreenshot = useCallback(async (file: File) => {
+    const newFiles = [...formData.screenshots, file];
+    setFormData(prev => ({ ...prev, screenshots: newFiles }));
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPreviewImages(prev => [...prev, e.target?.result as string]);
+    };
+    reader.readAsDataURL(file);
+  }, [formData.screenshots]);
 
   // Handle clipboard paste
   useEffect(() => {
@@ -134,19 +160,7 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
 
     document.addEventListener('paste', handlePaste);
     return () => document.removeEventListener('paste', handlePaste);
-  }, [isOpen]);
-
-  const addScreenshot = async (file: File) => {
-    const newFiles = [...formData.screenshots, file];
-    setFormData(prev => ({ ...prev, screenshots: newFiles }));
-
-    // Create preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setPreviewImages(prev => [...prev, e.target?.result as string]);
-    };
-    reader.readAsDataURL(file);
-  };
+  }, [isOpen, addScreenshot]);
 
   const removeScreenshot = (index: number) => {
     const newFiles = formData.screenshots.filter((_, i) => i !== index);
@@ -156,7 +170,7 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
   };
 
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: Record<string, unknown>) => {
       try {
         return await meetingApi.create(data);
       } catch (error) {
@@ -173,7 +187,8 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: Record<string, unknown>) => {
+      if (!meeting) throw new Error('No meeting to update');
       try {
         return await meetingApi.update(meeting.id, data);
       } catch (error) {
@@ -234,7 +249,7 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
     }
   };
 
-  const addParticipantFromContact = (contact: any) => {
+  const addParticipantFromContact = (contact: { name: string; title: string }) => {
     const participantName = `${contact.name} (${contact.title})`;
     // Check if participant is already added
     if (!formData.participants.includes(participantName)) {
@@ -427,7 +442,7 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
               <div>
                 <div className="text-sm text-gray-600 mb-2">Quick select from {customerName} contacts:</div>
                 <div className="flex flex-wrap gap-2">
-                  {customerContacts.map((contact: any, contactIndex: number) => {
+                  {customerContacts.map((contact: { name: string; title: string }, contactIndex: number) => {
                     const participantName = `${contact.name} (${contact.title})`;
                     const isSelected = formData.participants.includes(participantName);
                     return (

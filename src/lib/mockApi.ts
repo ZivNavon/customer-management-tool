@@ -299,19 +299,19 @@ export const mockApi = {
       return { data: meeting };
     },
 
-    create: async (data: any) => {
+    create: async (data: Record<string, unknown>) => {
       await delay(800);
       const newMeeting: Meeting = {
         id: nextMeetingId.toString(),
-        customer_id: data.customer_id,
-        title: data.title,
-        meeting_date: data.meeting_date,
-        duration: data.duration || 60,
-        participants: data.participants || [],
-        notes: data.notes || '',
-        action_items: data.action_items || [],
-        next_steps: data.next_steps || '',
-        screenshots: data.screenshots || [],
+        customer_id: data.customer_id as string,
+        title: data.title as string,
+        meeting_date: data.meeting_date as string,
+        duration: (data.duration as number) || 60,
+        participants: (data.participants as string[]) || [],
+        notes: (data.notes as string) || '',
+        action_items: (data.action_items as string[]) || [],
+        next_steps: (data.next_steps as string) || '',
+        screenshots: (data.screenshots as (string | File)[]) || [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -324,14 +324,14 @@ export const mockApi = {
       const customerIndex = mockCustomers.findIndex(c => c.id === data.customer_id);
       if (customerIndex !== -1) {
         mockCustomers[customerIndex].meetings_count = (mockCustomers[customerIndex].meetings_count || 0) + 1;
-        mockCustomers[customerIndex].last_meeting_date = data.meeting_date;
+        mockCustomers[customerIndex].last_meeting_date = data.meeting_date as string;
         saveCustomers(mockCustomers);
       }
       
       return { data: newMeeting };
     },
 
-    update: async (id: string, data: any) => {
+    update: async (id: string, data: Record<string, unknown>) => {
       await delay(700);
       const meetingIndex = mockMeetings.findIndex(m => m.id === id);
       if (meetingIndex === -1) {

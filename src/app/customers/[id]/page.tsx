@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useParams, useRouter } from 'next/navigation';
-import { customerApi, meetingApi, type Customer } from '@/lib/api';
+import { customerApi, meetingApi } from '@/lib/api';
 import { mockApi } from '@/lib/mockApi';
 import { Header } from '@/components/Header';
 import { MeetingModal } from '@/components/MeetingModal';
@@ -19,15 +19,40 @@ import {
   EnvelopeIcon
 } from '@heroicons/react/24/outline';
 
+interface Meeting {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  participants: string[];
+  screenshots: string[];
+  customerName: string;
+  customerId: string;
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  logo?: string;
+  contacts: Array<{
+    id: string;
+    name: string;
+    role: string;
+    email: string;
+    phone: string;
+  }>;
+}
+
 export default function CustomerDetailPage() {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const params = useParams();
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const customerId = params.id as string;
 
   const [showMeetingModal, setShowMeetingModal] = useState(false);
-  const [selectedMeeting, setSelectedMeeting] = useState<any>(undefined);
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | undefined>(undefined);
   const [showEditMeeting, setShowEditMeeting] = useState(false);
   const [showContactsModal, setShowContactsModal] = useState(false);
 
@@ -60,7 +85,7 @@ export default function CustomerDetailPage() {
   const customerData = customer?.data;
   const meetingsData = meetings?.data || [];
 
-  const handleEditMeeting = (meeting: any) => {
+  const handleEditMeeting = (meeting: Meeting) => {
     setSelectedMeeting(meeting);
     setShowEditMeeting(true);
   };
@@ -169,12 +194,12 @@ export default function CustomerDetailPage() {
             <div className="mt-6 pt-6 border-t border-gray-200">
               <h3 className="text-sm font-medium text-gray-700 mb-3">Key Contacts</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {customerData.contacts.slice(0, 6).map((contact: any, index: number) => (
+                {customerData.contacts.slice(0, 6).map((contact: Customer['contacts'][0], index: number) => (
                   <div key={index} className="bg-gray-50 rounded-md p-4 border border-gray-200">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <div className="font-medium text-gray-900 text-sm">{contact.name}</div>
-                        <div className="text-sm text-gray-600">{contact.title}</div>
+                        <div className="text-sm text-gray-600">{contact.role}</div>
                       </div>
                     </div>
                     
@@ -299,7 +324,7 @@ export default function CustomerDetailPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {meetingsData.map((meeting: any) => (
+                {meetingsData.map((meeting: Meeting) => (
                   <MeetingCard
                     key={meeting.id}
                     meeting={meeting}

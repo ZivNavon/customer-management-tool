@@ -76,12 +76,15 @@ export const createAutoBackup = (customers: Customer[]) => {
 };
 
 // Validate imported customer data
-export const validateCustomerData = (customers: any[]): customers is Customer[] => {
+export const validateCustomerData = (customers: unknown[]): customers is Customer[] => {
   return customers.every(customer => 
-    customer.id &&
-    customer.name &&
-    typeof customer.arr_usd === 'number' &&
-    customer.created_at &&
-    customer.updated_at
+    customer &&
+    typeof customer === 'object' &&
+    'id' in customer &&
+    'name' in customer &&
+    'arr_usd' in customer &&
+    typeof (customer as Customer).arr_usd === 'number' &&
+    'created_at' in customer &&
+    'updated_at' in customer
   );
 };

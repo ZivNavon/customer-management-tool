@@ -38,7 +38,7 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
       : [{ name: '', title: '', email: '', phone: '', notes: '' }]
   );
   
-  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [_logoFile, setLogoFile] = useState<File | null>(null);
   const [logoSource, setLogoSource] = useState<'file' | 'url'>('url');
 
   // Update form data when customer prop changes (for editing)

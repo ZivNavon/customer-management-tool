@@ -134,9 +134,9 @@ export const meetingApi = {
   getByCustomer: (customerId: string) =>
     api.get(`/customers/${customerId}/meetings`),
   getById: (id: string) => api.get(`/meetings/${id}`),
-  create: (data: any) =>
-    api.post(`/customers/${data.customer_id}/meetings`, data),
-  update: (id: string, data: any) =>
+  create: (data: Record<string, unknown>) =>
+    api.post(`/customers/${(data.customer_id as string)}/meetings`, data),
+  update: (id: string, data: Record<string, unknown>) =>
     api.put(`/meetings/${id}`, data),
   delete: (id: string) => api.delete(`/meetings/${id}`),
   uploadAsset: (meetingId: string, file: File) => {

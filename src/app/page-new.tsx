@@ -10,7 +10,7 @@ import { Header } from '@/components/Header';
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 export default function Home() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
 

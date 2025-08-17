@@ -18,9 +18,30 @@ import {
   SparklesIcon
 } from '@heroicons/react/24/outline';
 
+interface Meeting {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  meeting_date: string;
+  duration?: number;
+  participants: string[];
+  screenshots: string[];
+  customerName: string;
+  customerId: string;
+  customer_id: string;
+  notes?: string;
+  action_items?: string[];
+  next_steps?: string;
+  customer?: {
+    name: string;
+  };
+}
+
 interface MeetingCardProps {
-  meeting: any;
-  onEdit: (meeting: any) => void;
+  meeting: Meeting;
+  onEdit: (meeting: Meeting) => void;
 }
 
 export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
@@ -220,7 +241,7 @@ export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
                 Screenshots ({meeting.screenshots.length})
               </h4>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {meeting.screenshots.map((screenshot: any, index: number) => (
+                {meeting.screenshots.map((screenshot: string | File, index: number) => (
                   <div key={index} className="relative">
                     <img
                       src={typeof screenshot === 'string' ? screenshot : URL.createObjectURL(screenshot)}

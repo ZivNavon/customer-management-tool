@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { meetingApi } from '@/lib/api';
-import { mockApi } from '@/lib/mockApi';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   SparklesIcon,
   DocumentTextIcon,
@@ -30,14 +28,14 @@ interface AIContext {
 }
 
 export function AISummary({ 
-  meetingId, 
-  customerId, 
+  meetingId: _meetingId, 
+  customerId: _customerId, 
   customerName, 
   notes, 
   screenshots, 
   onSummaryGenerated 
 }: AISummaryProps) {
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const [generatedSummary, setGeneratedSummary] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showContext, setShowContext] = useState(false);
@@ -165,7 +163,7 @@ export function AISummary({
     
     summary += `### Email Context Integration\n`;
     summary += `*AI has considered the following recent communications:*\n\n`;
-    context.previousEmails.slice(0, 2).forEach((email, index) => {
+    context.previousEmails.slice(0, 2).forEach((email, _index) => {
       summary += `- ${email}\n`;
     });
     

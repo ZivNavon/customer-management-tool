@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { customerApi } from '@/lib/api';
 import { mockApi } from '@/lib/mockApi';
@@ -10,9 +10,6 @@ import {
   UsersIcon,
   CalendarIcon,
   ExclamationTriangleIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
-  ClockIcon,
   PhoneIcon,
   EnvelopeIcon,
   CurrencyDollarIcon
@@ -22,6 +19,22 @@ import {
   ExclamationCircleIcon, 
   XCircleIcon 
 } from '@heroicons/react/24/solid';
+
+interface CustomerData {
+  id: string;
+  name: string;
+  arr_usd: number;
+  meetings_count: number;
+  last_meeting_date?: string;
+  logo?: string;
+  contacts?: Array<{
+    id: string;
+    name: string;
+    role: string;
+    email: string;
+    phone: string;
+  }>;
+}
 
 interface CustomerStats {
   totalCustomers: number;
@@ -68,7 +81,7 @@ export default function DashboardPage() {
     },
   });
 
-  const customersData = customers?.data || [];
+  const customersData = useMemo(() => customers?.data || [], [customers?.data]);
 
   // Calculate statistics and risk assessments
   useEffect(() => {
@@ -78,7 +91,7 @@ export default function DashboardPage() {
     }
   }, [customersData]);
 
-  const calculateStats = (customers: any[]) => {
+  const calculateStats = (customers: CustomerData[]) => {
     const totalCustomers = customers.length;
     const totalARR = customers.reduce((sum, customer) => sum + (customer.arr_usd || 0), 0);
     const totalMeetings = customers.reduce((sum, customer) => sum + (customer.meetings_count || 0), 0);
@@ -104,7 +117,7 @@ export default function DashboardPage() {
     });
   };
 
-  const calculateRiskAssessments = (customers: any[]) => {
+  const calculateRiskAssessments = (customers: CustomerData[]) => {
     const assessments: RiskAssessment[] = customers.map(customer => {
       const factors: string[] = [];
       let riskScore = 0;
@@ -148,8 +161,8 @@ export default function DashboardPage() {
         riskScore += 15;
         factors.push('No contact information');
       } else {
-        const hasEmail = customer.contacts.some((c: any) => c.email);
-        const hasPhone = customer.contacts.some((c: any) => c.phone);
+        const hasEmail = customer.contacts?.some((c) => c.email) || false;
+        const hasPhone = customer.contacts?.some((c) => c.phone) || false;
         if (!hasEmail && !hasPhone) {
           riskScore += 10;
           factors.push('Limited contact methods');
@@ -337,7 +350,7 @@ export default function DashboardPage() {
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {riskAssessments.map((assessment) => {
-                  const customer = customersData.find(c => c.id === assessment.customerId);
+                  const customer = customersData.find((c: CustomerData) => c.id === assessment.customerId);
                   return (
                     <tr key={assessment.customerId} className={getRiskColor(assessment.riskLevel)}>
                       <td className="px-6 py-4 whitespace-nowrap">
