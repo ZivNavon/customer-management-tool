@@ -76,7 +76,7 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">ARR</p>
-                  <p className="text-lg font-bold text-green-700 dark:text-green-300">{formatCurrency(customer.arr || 0)}</p>
+                  <p className="text-lg font-bold text-green-700 dark:text-green-300">{formatCurrency(customer.arr_usd || 0)}</p>
                 </div>
                 <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
                   <span className="text-green-600 dark:text-green-400">💰</span>

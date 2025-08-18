@@ -2,15 +2,30 @@
 
 /* Dark mode CSS that forces styles to work */
 html.dark,
-html.dark body,
 .dark {
   background-color: #111827 !important;
   color: #f9fafb !important;
 }
 
-/* Specific dark mode overrides */
+html.dark body,
+.dark body {
+  background: #111827 !important;
+  color: #f9fafb !important;
+}
+
+/* Force background gradients in dark mode */
+html.dark .bg-gradient-to-br,
+.dark .bg-gradient-to-br {
+  background: #1f2937 !important;
+}
+
+/* Specific dark mode overrides for all components */
 html.dark .bg-white,
-.dark .bg-white {
+.dark .bg-white,
+html.dark .bg-white\/80,
+.dark .bg-white\/80,
+html.dark .bg-white\/90,
+.dark .bg-white\/90 {
   background-color: #1f2937 !important;
 }
 
@@ -30,10 +45,15 @@ html.dark .bg-gray-200,
 }
 
 html.dark .bg-gray-800,
-.dark .bg-gray-800 {
+.dark .bg-gray-800,
+html.dark .bg-gray-800\/80,
+.dark .bg-gray-800\/80,
+html.dark .bg-gray-800\/90,
+.dark .bg-gray-800\/90 {
   background-color: #1f2937 !important;
 }
 
+/* Text colors */
 html.dark .text-gray-900,
 .dark .text-gray-900 {
   color: #f9fafb !important;
@@ -49,14 +69,30 @@ html.dark .text-gray-700,
   color: #d1d5db !important;
 }
 
+html.dark .text-gray-400,
+.dark .text-gray-400 {
+  color: #9ca3af !important;
+}
+
+/* Border colors */
 html.dark .border-gray-200,
-.dark .border-gray-200 {
+.dark .border-gray-200,
+html.dark .border-gray-200\/50,
+.dark .border-gray-200\/50 {
   border-color: #374151 !important;
 }
 
 html.dark .border-gray-700,
-.dark .border-gray-700 {
+.dark .border-gray-700,
+html.dark .border-gray-700\/50,
+.dark .border-gray-700\/50 {
   border-color: #4b5563 !important;
+}
+
+/* Force gradient backgrounds in dark mode */
+html.dark .bg-gradient-to-br.from-gray-50,
+.dark .bg-gradient-to-br.from-gray-50 {
+  background: linear-gradient(to bottom right, #1f2937, #111827) !important;
 }
 
 /* Force transitions */
