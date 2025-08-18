@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Management Tool - Data Export</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #1f2937;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+        .data-container {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .data-json {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .button {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .status {
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        .error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        .warning {
+            background: #fefce8;
+            color: #ca8a04;
+            border: 1px solid #fef08a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗂️ Customer Management Tool - Database Export</h1>
+        
+        <div id="status"></div>
+        
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-number" id="customerCount">0</div>
+                <div>Customers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="meetingCount">0</div>
+                <div>Meetings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="dataSize">0 KB</div>
+                <div>Total Data Size</div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <button class="button" onclick="loadData()">📊 Load Data from LocalStorage</button>
+            <button class="button" onclick="downloadJSON()">💾 Download as JSON</button>
+            <button class="button" onclick="downloadCSV()">📋 Download as CSV</button>
+            <button class="button" onclick="clearData()">🗑️ Clear All Data</button>
+        </div>
+
+        <div class="section" id="customersSection" style="display: none;">
+            <h2>👥 Customers Data</h2>
+            <div class="data-container">
+                <div id="customersData" class="data-json"></div>
+            </div>
+        </div>
+
+        <div class="section" id="meetingsSection" style="display: none;">
+            <h2>🗓️ Meetings Data</h2>
+            <div class="data-container">
+                <div id="meetingsData" class="data-json"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let customersData = null;
+        let meetingsData = null;
+
+        function showStatus(message, type = 'success') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 3000);
+        }
+
+        function loadData() {
+            try {
+                // Load customers data
+                const customersRaw = localStorage.getItem('customers_mock_data');
+                const meetingsRaw = localStorage.getItem('meetings_mock_data');
+
+                if (!customersRaw && !meetingsRaw) {
+                    showStatus('⚠️ No data found in LocalStorage. Make sure you have used the app and created some customers/meetings.', 'warning');
+                    return;
+                }
+
+                customersData = customersRaw ? JSON.parse(customersRaw) : [];
+                meetingsData = meetingsRaw ? JSON.parse(meetingsRaw) : [];
+
+                // Update statistics
+                document.getElementById('customerCount').textContent = customersData.length;
+                document.getElementById('meetingCount').textContent = meetingsData.length;
+                
+                const totalSize = ((customersRaw?.length || 0) + (meetingsRaw?.length || 0)) / 1024;
+                document.getElementById('dataSize').textContent = `${totalSize.toFixed(1)} KB`;
+
+                // Show data sections
+                document.getElementById('stats').style.display = 'grid';
+                
+                if (customersData.length > 0) {
+                    document.getElementById('customersSection').style.display = 'block';
+                    document.getElementById('customersData').textContent = JSON.stringify(customersData, null, 2);
+                }
+                
+                if (meetingsData.length > 0) {
+                    document.getElementById('meetingsSection').style.display = 'block';
+                    document.getElementById('meetingsData').textContent = JSON.stringify(meetingsData, null, 2);
+                }
+
+                showStatus(`✅ Successfully loaded ${customersData.length} customers and ${meetingsData.length} meetings!`);
+            } catch (error) {
+                showStatus(`❌ Error loading data: ${error.message}`, 'error');
+            }
+        }
+
+        function downloadJSON() {
+            if (!customersData && !meetingsData) {
+                showStatus('❌ No data loaded. Click "Load Data" first.', 'error');
+                return;
+            }
+
+            const exportData = {
+                export_date: new Date().toISOString(),
+                customers: customersData || [],
+                meetings: meetingsData || [],
+                metadata: {
+                    total_customers: (customersData || []).length,
+                    total_meetings: (meetingsData || []).length,
+                    source: 'Customer Management Tool LocalStorage'
+                }
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `customer-management-data-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showStatus('💾 JSON file downloaded successfully!');
+        }
+
+        function downloadCSV() {
+            if (!customersData && !meetingsData) {
+                showStatus('❌ No data loaded. Click "Load Data" first.', 'error');
+                return;
+            }
+
+            let csvContent = '';
+            
+            // Customers CSV
+            if (customersData && customersData.length > 0) {
+                csvContent += 'CUSTOMERS\n';
+                csvContent += 'Name,ARR USD,Notes,Created At,Updated At\n';
+                customersData.forEach(customer => {
+                    csvContent += `"${customer.name || ''}","${customer.arr_usd || 0}","${(customer.notes || '').replace(/"/g, '""')}","${customer.created_at || ''}","${customer.updated_at || ''}"\n`;
+                });
+                csvContent += '\n';
+            }
+
+            // Meetings CSV
+            if (meetingsData && meetingsData.length > 0) {
+                csvContent += 'MEETINGS\n';
+                csvContent += 'Title,Customer ID,Date,Duration,Participants,Notes,Action Items\n';
+                meetingsData.forEach(meeting => {
+                    const participants = (meeting.participants || []).join('; ');
+                    const actionItems = (meeting.action_items || []).join('; ');
+                    csvContent += `"${meeting.title || ''}","${meeting.customer_id || ''}","${meeting.meeting_date || ''}","${meeting.duration || 0}","${participants}","${(meeting.notes || '').replace(/"/g, '""')}","${actionItems}"\n`;
+                });
+            }
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `customer-management-data-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showStatus('📋 CSV file downloaded successfully!');
+        }
+
+        function clearData() {
+            if (!confirm('⚠️ Are you sure you want to clear ALL data? This cannot be undone!')) {
+                return;
+            }
+
+            try {
+                localStorage.removeItem('customers_mock_data');
+                localStorage.removeItem('meetings_mock_data');
+                
+                // Reset display
+                customersData = null;
+                meetingsData = null;
+                document.getElementById('stats').style.display = 'none';
+                document.getElementById('customersSection').style.display = 'none';
+                document.getElementById('meetingsSection').style.display = 'none';
+                
+                showStatus('🗑️ All data cleared successfully!');
+            } catch (error) {
+                showStatus(`❌ Error clearing data: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-load data when page opens
+        window.onload = function() {
+            loadData();
+        };
+    </script>
+</body>
+</html>

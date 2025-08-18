@@ -18,7 +18,8 @@ import {
   UsersIcon,
   CalendarIcon,
   ExclamationTriangleIcon,
-  CurrencyDollarIcon
+  CurrencyDollarIcon,
+  FaceSmileIcon
 } from '@heroicons/react/24/outline';
 
 interface CustomerStats {
@@ -27,6 +28,7 @@ interface CustomerStats {
   avgMeetingsPerCustomer: number;
   totalMeetings: number;
   atRiskCustomers: number;
+  satisfiedCustomers: number;
   recentMeetings: number;
 }
 
@@ -43,6 +45,7 @@ export default function Home() {
     avgMeetingsPerCustomer: 0,
     totalMeetings: 0,
     atRiskCustomers: 0,
+    satisfiedCustomers: 0,
     recentMeetings: 0
   });
 
@@ -84,14 +87,11 @@ export default function Home() {
       return lastMeeting >= thirtyDaysAgo;
     }).length;
 
-    // Calculate at-risk customers (no meeting in 60+ days or low engagement)
-    const atRiskCustomers = customers.filter(customer => {
-      const daysSinceLastMeeting = customer.last_meeting_date 
-        ? Math.floor((new Date().getTime() - new Date(customer.last_meeting_date).getTime()) / (1000 * 60 * 60 * 24))
-        : 999;
-      
-      return daysSinceLastMeeting > 60 || (customer.meetings_count || 0) < 2;
-    }).length;
+    // Count manually marked at-risk customers
+    const atRiskCustomers = customers.filter(customer => customer.is_at_risk === true).length;
+    
+    // Count manually marked satisfied customers
+    const satisfiedCustomers = customers.filter(customer => customer.is_satisfied === true).length;
 
     setStats({
       totalCustomers,
@@ -99,6 +99,7 @@ export default function Home() {
       avgMeetingsPerCustomer,
       totalMeetings,
       atRiskCustomers,
+      satisfiedCustomers,
       recentMeetings
     });
   };
@@ -181,7 +182,7 @@ export default function Home() {
           </div>
           
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
             {/* Total Customers */}
             <div className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6 transition-all duration-300 hover:-translate-y-1">
               <div className="flex items-center justify-between">
@@ -200,35 +201,52 @@ export default function Home() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold text-green-600 dark:text-green-400 uppercase tracking-wider mb-2">Total ARR</p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(stats.totalARR)}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(stats.totalARR)}</p>
+                </div>
+                <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg group-hover:shadow-green-500/25 transition-all duration-300 group-hover:scale-110">
+                  <CurrencyDollarIcon className="h-6 w-6 text-white" />
                 </div>
               </div>
             </div>
 
             {/* Total Meetings */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                  <CalendarIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <div className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6 transition-all duration-300 hover:-translate-y-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-2">Total Meetings</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalMeetings}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Avg: {stats.avgMeetingsPerCustomer}</p>
                 </div>
-                <div className="ml-3">
-                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Meetings</p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.totalMeetings}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">Avg: {stats.avgMeetingsPerCustomer}</p>
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg group-hover:shadow-purple-500/25 transition-all duration-300 group-hover:scale-110">
+                  <CalendarIcon className="h-6 w-6 text-white" />
                 </div>
               </div>
             </div>
 
             {/* At Risk Customers */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center">
-                <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
-                  <ExclamationTriangleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+            <div className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6 transition-all duration-300 hover:-translate-y-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider mb-2">At Risk</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.atRiskCustomers}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Manual marking</p>
                 </div>
-                <div className="ml-3">
-                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">At Risk</p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.atRiskCustomers}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">{stats.recentMeetings} recent</p>
+                <div className="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-lg group-hover:shadow-red-500/25 transition-all duration-300 group-hover:scale-110">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Satisfied Customers */}
+            <div className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6 transition-all duration-300 hover:-translate-y-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-2">Satisfied</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.satisfiedCustomers}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Happy customers</p>
+                </div>
+                <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-lg group-hover:shadow-emerald-500/25 transition-all duration-300 group-hover:scale-110">
+                  <FaceSmileIcon className="h-6 w-6 text-white" />
                 </div>
               </div>
             </div>

@@ -35,7 +35,20 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
         <div className="p-6 cursor-pointer">
           {/* Logo and Name */}
           <div className="flex items-center mb-6">
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mr-4 flex-shrink-0 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
+            <div className="relative w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mr-4 flex-shrink-0 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
+              {/* Status Ribbon on Logo */}
+              {customer.is_at_risk && (
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-red-500 to-red-600 rounded-full shadow-lg flex items-center justify-center z-10 transform rotate-12">
+                  <span className="text-white text-xs font-bold">!</span>
+                </div>
+              )}
+              
+              {customer.is_satisfied && !customer.is_at_risk && (
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full shadow-lg flex items-center justify-center z-10 transform -rotate-12">
+                  <span className="text-white text-xs font-bold">✓</span>
+                </div>
+              )}
+              
               {customer.logo_url ? (
                 <Image
                   src={customer.logo_url}
@@ -185,29 +198,34 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
       </Link>
 
       {/* Action buttons */}
-      <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-end space-x-2">
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            onEdit?.(customer);
-          }}
-          className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-          title={t('action.edit')}
-        >
-          <PencilIcon className="h-4 w-4" />
-        </button>
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            if (confirm(`Are you sure you want to delete ${customer.name}?`)) {
-              onDelete?.(customer.id);
-            }
-          }}
-          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-          title={t('action.delete')}
-        >
-          <TrashIcon className="h-4 w-4" />
-        </button>
+      <div className="px-6 py-3 bg-gray-50/70 dark:bg-gray-800/50 border-t border-gray-200/50 dark:border-gray-700/50">
+        <div className="flex justify-end items-center">
+          {/* Edit/Delete Actions */}
+          <div className="flex space-x-2">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                onEdit?.(customer);
+              }}
+              className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+              title={t('action.edit')}
+            >
+              <PencilIcon className="h-4 w-4" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                if (confirm(`Are you sure you want to delete ${customer.name}?`)) {
+                  onDelete?.(customer.id);
+                }
+              }}
+              className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+              title={t('action.delete')}
+            >
+              <TrashIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

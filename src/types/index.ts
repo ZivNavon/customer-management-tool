@@ -12,6 +12,7 @@ export interface Meeting {
   customerId: string;
   customer_id: string;
   notes?: string;
+  detected_language?: string;
   action_items?: string[];
   next_steps?: string;
   customer?: {
@@ -28,6 +29,8 @@ export interface Customer {
   notes?: string;
   meetings_count?: number;
   last_meeting_date?: string;
+  is_at_risk?: boolean;
+  is_satisfied?: boolean;
   created_at: string;
   updated_at: string;
   contacts?: Array<{

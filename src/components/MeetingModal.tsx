@@ -5,6 +5,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { meetingApi, customerApi } from '@/lib/api';
 import { mockApi } from '@/lib/mockApi';
+import { detectLanguage, getTextDirection, languageNames } from '@/lib/i18n';
 import { AISummary } from './AISummary';
 import type { Meeting } from '@/types';
 import {
@@ -70,6 +71,7 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [showAISummary, setShowAISummary] = useState(false);
   const [aiGeneratedSummary, setAiGeneratedSummary] = useState<string>('');
+  const [detectedLanguage, setDetectedLanguage] = useState<string>('en');
 
   // Fetch customer data to get contacts
   const { data: customer } = useQuery({
@@ -90,17 +92,25 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
   useEffect(() => {
     if (meeting) {
       const meetingDate = new Date(meeting.meeting_date || meeting.date);
+      const notes = meeting.notes || '';
       setFormData({
         title: meeting.title || generateDefaultTitle(customerName, meetingDate.toISOString().split('T')[0]),
         date: meetingDate.toISOString().split('T')[0],
         time: meetingDate.toTimeString().split(' ')[0].slice(0, 5),
         duration: meeting.duration || 60,
         participants: meeting.participants?.length ? meeting.participants : [],
-        notes: meeting.notes || '',
+        notes: notes,
         action_items: meeting.action_items?.length ? meeting.action_items : [''],
         next_steps: meeting.next_steps || '',
         screenshots: []
       });
+      
+      // Set detected language from existing meeting or detect from notes
+      if (meeting.detected_language) {
+        setDetectedLanguage(meeting.detected_language);
+      } else if (notes.trim()) {
+        setDetectedLanguage(detectLanguage(notes));
+      }
     }
   }, [meeting, customerName]);
 
@@ -223,6 +233,7 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
       duration: formData.duration,
       participants: formData.participants, // Already clean, no need to filter
       notes: formData.notes,
+      detected_language: detectedLanguage,
       action_items: cleanActionItems,
       next_steps: formData.next_steps,
       screenshots: formData.screenshots
@@ -465,11 +476,28 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
             <textarea
               ref={notesRef}
               value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+              onChange={(e) => {
+                const newNotes = e.target.value;
+                setFormData(prev => ({ ...prev, notes: newNotes }));
+                
+                // Detect language of notes content
+                if (newNotes.trim()) {
+                  const detected = detectLanguage(newNotes);
+                  setDetectedLanguage(detected);
+                }
+              }}
               rows={6}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter meeting notes... (Tip: You can paste screenshots with Ctrl+V)"
+              style={{ direction: getTextDirection(detectedLanguage) }}
             />
+            {formData.notes.trim() && (
+              <div className="mt-1 text-xs text-gray-500 flex items-center">
+                <span className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700">
+                  🌐 Detected: {languageNames[detectedLanguage as keyof typeof languageNames] || detectedLanguage.toUpperCase()}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Screenshots */}

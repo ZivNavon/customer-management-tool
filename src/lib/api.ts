@@ -49,6 +49,8 @@ export interface Customer {
   last_meeting_date?: string;
   contacts_count?: number;
   meetings_count?: number;
+  is_at_risk?: boolean;
+  is_satisfied?: boolean;
   contacts?: Contact[];
 }
 

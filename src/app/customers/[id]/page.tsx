@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useParams, useRouter } from 'next/navigation';
 import { customerApi, meetingApi } from '@/lib/api';
@@ -60,6 +60,63 @@ export default function CustomerDetailPage() {
 
   const customerData = customer?.data;
   const meetingsData = meetings?.data || [];
+
+  // Mutation for updating customer satisfaction status
+  const updateSatisfactionMutation = useMutation({
+    mutationFn: async ({ customerId, field, value }: { customerId: string; field: 'is_satisfied' | 'is_at_risk'; value: boolean }) => {
+      try {
+        const updatedCustomer = await customerApi.update(customerId, { [field]: value });
+        return updatedCustomer;
+      } catch (error) {
+        console.log('Backend not available, using mock data');
+        return await mockApi.customers.update(customerId, { [field]: value });
+      }
+    },
+    // Optimistic update for faster UI response
+    onMutate: async ({ customerId, field, value }) => {
+      // Cancel any outgoing refetches
+      await _queryClient.cancelQueries({ queryKey: ['customer', customerId] });
+      
+      // Snapshot the previous value
+      const previousCustomer = _queryClient.getQueryData(['customer', customerId]);
+      
+      // Optimistically update to the new value
+      _queryClient.setQueryData(['customer', customerId], (old: any) => {
+        if (old?.data) {
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              [field]: value
+            }
+          };
+        }
+        return old;
+      });
+      
+      return { previousCustomer };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousCustomer) {
+        _queryClient.setQueryData(['customer', customerId], context.previousCustomer);
+      }
+    },
+    onSuccess: () => {
+      // Only invalidate customers list to update dashboard stats
+      _queryClient.invalidateQueries({ queryKey: ['customers'] });
+    },
+  });
+
+  const handleSatisfactionChange = (field: 'is_satisfied' | 'is_at_risk', checked: boolean) => {
+    if (customerId) {
+      updateSatisfactionMutation.mutate({ 
+        customerId, 
+        field, 
+        value: checked 
+      });
+    }
+  };
 
   const handleEditMeeting = (meeting: Meeting) => {
     setSelectedMeeting(meeting);
@@ -123,7 +180,20 @@ export default function CustomerDetailPage() {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
           <div className="flex items-start justify-between">
             <div className="flex items-center">
-              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mr-4">
+              <div className="relative w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mr-4">
+                {/* Status Ribbon on Logo */}
+                {customerData.is_at_risk && (
+                  <div className="absolute -top-1 -right-1 w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 rounded-full shadow-lg flex items-center justify-center z-10 transform rotate-12">
+                    <span className="text-white text-sm font-bold">!</span>
+                  </div>
+                )}
+                
+                {customerData.is_satisfied && !customerData.is_at_risk && (
+                  <div className="absolute -top-1 -right-1 w-8 h-8 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full shadow-lg flex items-center justify-center z-10 transform -rotate-12">
+                    <span className="text-white text-sm font-bold">✓</span>
+                  </div>
+                )}
+                
                 {customerData.logo_url ? (
                   <img
                     src={customerData.logo_url}
@@ -160,6 +230,29 @@ export default function CustomerDetailPage() {
                     <CalendarIcon className="h-4 w-4 mr-1" />
                     {meetingsData.length} meetings
                   </span>
+                </div>
+                
+                {/* Satisfaction Controls */}
+                <div className="flex items-center space-x-6 mt-4">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={customerData.is_at_risk || false}
+                      onChange={(e) => handleSatisfactionChange('is_at_risk', e.target.checked)}
+                      className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2"
+                    />
+                    <span className="text-sm font-medium text-red-600">At Risk</span>
+                  </label>
+                  
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={customerData.is_satisfied || false}
+                      onChange={(e) => handleSatisfactionChange('is_satisfied', e.target.checked)}
+                      className="w-4 h-4 text-emerald-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2"
+                    />
+                    <span className="text-sm font-medium text-emerald-600">Satisfied</span>
+                  </label>
                 </div>
               </div>
             </div>

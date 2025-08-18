@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { meetingApi } from '@/lib/api';
 import { mockApi } from '@/lib/mockApi';
+import { detectLanguage, getTextDirection, languageNames } from '@/lib/i18n';
 import { AISummary } from './AISummary';
 import type { Meeting } from '@/types';
 import {
@@ -103,7 +104,10 @@ export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
             {/* Quick preview of notes */}
             {meeting.notes && (
               <div className="mb-3">
-                <p className="text-gray-700 text-sm line-clamp-2">
+                <p 
+                  className="text-gray-700 text-sm line-clamp-2"
+                  style={{ direction: getTextDirection(meeting.detected_language || detectLanguage(meeting.notes)) }}
+                >
                   {meeting.notes}
                 </p>
               </div>
@@ -174,11 +178,25 @@ export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
           {/* Full Notes */}
           {meeting.notes && (
             <div>
-              <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                <DocumentTextIcon className="h-4 w-4 mr-1" />
-                Meeting Notes
+              <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center justify-between">
+                <span className="flex items-center">
+                  <DocumentTextIcon className="h-4 w-4 mr-1" />
+                  Meeting Notes
+                </span>
+                {(() => {
+                  const detectedLang = meeting.detected_language || detectLanguage(meeting.notes);
+                  const languageName = languageNames[detectedLang as keyof typeof languageNames] || detectedLang.toUpperCase();
+                  return (
+                    <span className="text-xs text-gray-500 flex items-center">
+                      🌐 {languageName}
+                    </span>
+                  );
+                })()}
               </h4>
-              <p className="text-gray-700 whitespace-pre-wrap text-sm bg-gray-50 p-3 rounded-md">
+              <p 
+                className="text-gray-700 whitespace-pre-wrap text-sm bg-gray-50 p-3 rounded-md"
+                style={{ direction: getTextDirection(meeting.detected_language || detectLanguage(meeting.notes)) }}
+              >
                 {meeting.notes}
               </p>
             </div>

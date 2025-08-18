@@ -1,7 +1,6 @@
 'use client';
 
 import { useTranslation } from 'react-i18next';
-import { LanguageToggle } from './LanguageToggle';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from './ThemeProvider';
@@ -78,8 +77,6 @@ export function Header() {
                 <SunIcon className="h-5 w-5 text-gray-600 dark:text-gray-300 group-hover:text-yellow-500 transition-colors" />
               )}
             </button>
-            
-            <LanguageToggle />
             
             <div className="relative">
               <button
