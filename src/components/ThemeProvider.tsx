@@ -39,8 +39,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     
     // Store in localStorage
     localStorage.setItem('theme', newTheme);
-    
-    console.log(`Theme applied: ${newTheme}`, root.classList.toString());
   };
 
   useEffect(() => {
@@ -51,7 +49,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
-    console.log(`Toggling theme from ${theme} to ${newTheme}`);
     setTheme(newTheme);
   };
 
