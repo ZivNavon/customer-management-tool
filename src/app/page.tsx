@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { customerApi, type Customer } from '@/lib/api';
@@ -8,6 +8,7 @@ import { mockApi } from '@/lib/mockApi';
 import { CustomerCard } from '@/components/CustomerCard';
 import { CustomerModal } from '@/components/CustomerModal';
 import { Header } from '@/components/Header';
+import { SimpleThemeTest } from '@/components/SimpleThemeTest';
 import { exportCustomersToFile, importCustomersFromFile } from '@/lib/fileStorage';
 import { 
   PlusIcon, 
@@ -165,6 +166,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <SimpleThemeTest />
       <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

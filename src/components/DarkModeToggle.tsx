@@ -6,9 +6,19 @@ import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 export function DarkModeToggle() {
   const { theme, toggleTheme } = useTheme();
 
+  const handleToggle = () => {
+    console.log('Dark mode toggle clicked, current theme:', theme);
+    toggleTheme();
+    
+    // Debug: Check classes after toggle
+    setTimeout(() => {
+      console.log('HTML classes after toggle:', document.documentElement.className);
+    }, 100);
+  };
+
   return (
     <button
-      onClick={toggleTheme}
+      onClick={handleToggle}
       className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
       title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
     >

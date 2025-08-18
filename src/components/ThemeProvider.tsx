@@ -17,44 +17,51 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check for saved theme preference or default to 'light'
-    const savedTheme = (typeof window !== 'undefined' ? localStorage.getItem('theme') : null) as Theme;
-    const systemTheme = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const savedTheme = localStorage.getItem('theme') as Theme;
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     
-    setTheme(savedTheme || systemTheme);
+    const initialTheme = savedTheme || systemTheme;
+    setTheme(initialTheme);
+    
+    // Apply theme immediately to prevent flash
+    applyTheme(initialTheme);
     setMounted(true);
   }, []);
 
+  const applyTheme = (newTheme: Theme) => {
+    const root = document.documentElement;
+    
+    // Remove existing theme classes
+    root.classList.remove('light', 'dark');
+    
+    // Add new theme class
+    root.classList.add(newTheme);
+    
+    // Store in localStorage
+    localStorage.setItem('theme', newTheme);
+    
+    console.log(`Theme applied: ${newTheme}`, root.classList.toString());
+  };
+
   useEffect(() => {
-    if (mounted && typeof window !== 'undefined') {
-      localStorage.setItem('theme', theme);
-      
-      // Apply theme to document root
-      const root = document.documentElement;
-      if (theme === 'dark') {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-      
-      // Also apply to body for immediate effect
-      document.body.className = document.body.className
-        .replace(/\bdark\b/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-      
-      if (theme === 'dark') {
-        document.body.classList.add('dark');
-      }
+    if (mounted) {
+      applyTheme(theme);
     }
   }, [theme, mounted]);
 
   const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    console.log(`Toggling theme from ${theme} to ${newTheme}`);
+    setTheme(newTheme);
   };
 
   // Prevent hydration mismatch
   if (!mounted) {
-    return <div className="min-h-screen bg-white">{children}</div>;
+    return (
+      <div className="min-h-screen bg-white">
+        {children}
+      </div>
+    );
   }
 
   return (
