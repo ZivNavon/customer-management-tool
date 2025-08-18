@@ -30,6 +30,8 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
     arr_usd: customer?.arr_usd || 0,
     notes: customer?.notes || '',
     logo_url: customer?.logo_url || '',
+    renewal_date: customer?.renewal_date || '',
+    last_meeting_date: customer?.last_meeting_date || '',
   });
   
   const [contacts, setContacts] = useState<Contact[]>(
@@ -49,6 +51,8 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
         arr_usd: customer.arr_usd,
         notes: customer.notes || '',
         logo_url: customer.logo_url || '',
+        renewal_date: customer.renewal_date || '',
+        last_meeting_date: customer.last_meeting_date || '',
       });
       setContacts(
         customer.contacts && customer.contacts.length > 0 
@@ -59,7 +63,7 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
   }, [customer]);
 
   const createMutation = useMutation({
-    mutationFn: async (data: { name: string; logo_url?: string; arr_usd: number; notes?: string; contacts?: Contact[] }) => {
+    mutationFn: async (data: { name: string; logo_url?: string; arr_usd: number; notes?: string; renewal_date?: string; last_meeting_date?: string; contacts?: Contact[] }) => {
       try {
         return await customerApi.create(data);
       } catch (error) {
@@ -108,7 +112,7 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
   };
 
   const resetForm = () => {
-    setFormData({ name: '', arr_usd: 0, notes: '', logo_url: '' });
+    setFormData({ name: '', arr_usd: 0, notes: '', logo_url: '', renewal_date: '', last_meeting_date: '' });
     setContacts([{ name: '', title: '', email: '', phone: '', notes: '' }]);
     setLogoFile(null);
     setLogoSource('url');
@@ -199,6 +203,34 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
               min="0"
               step="1000"
               value={formData.arr_usd}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="renewal_date" className="block text-sm font-medium text-gray-700">
+              Renewal Date
+            </label>
+            <input
+              type="date"
+              id="renewal_date"
+              name="renewal_date"
+              value={formData.renewal_date}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="last_meeting_date" className="block text-sm font-medium text-gray-700">
+              Last Meeting Date
+            </label>
+            <input
+              type="date"
+              id="last_meeting_date"
+              name="last_meeting_date"
+              value={formData.last_meeting_date}
               onChange={handleChange}
               className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />

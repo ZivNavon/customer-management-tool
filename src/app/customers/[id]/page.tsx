@@ -118,6 +118,30 @@ export default function CustomerDetailPage() {
     }
   };
 
+  // Check if renewal is within 6 months (182 days)
+  const isRenewalDueSoon = (renewalDate?: string) => {
+    if (!renewalDate) return false;
+    
+    const today = new Date();
+    const renewal = new Date(renewalDate);
+    const sixMonthsFromNow = new Date();
+    sixMonthsFromNow.setMonth(today.getMonth() + 6);
+    
+    return renewal <= sixMonthsFromNow && renewal >= today;
+  };
+
+  // Check if renewal date has passed
+  const isRenewalExpired = (renewalDate?: string) => {
+    if (!renewalDate) return false;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+    const renewal = new Date(renewalDate);
+    renewal.setHours(0, 0, 0, 0);
+    
+    return renewal < today;
+  };
+
   const handleEditMeeting = (meeting: Meeting) => {
     setSelectedMeeting(meeting);
     setShowEditMeeting(true);
@@ -194,6 +218,17 @@ export default function CustomerDetailPage() {
                   </div>
                 )}
                 
+                {/* Renewal Warning Indicator - appears on left side */}
+                {(isRenewalDueSoon(customerData.renewal_date) || isRenewalExpired(customerData.renewal_date)) && (
+                  <div className={`absolute -top-1 -left-1 w-8 h-8 rounded-full shadow-lg flex items-center justify-center z-10 transform -rotate-12 ${
+                    isRenewalExpired(customerData.renewal_date)
+                      ? 'bg-gradient-to-br from-red-500 to-red-600'
+                      : 'bg-gradient-to-br from-amber-500 to-orange-600'
+                  }`}>
+                    <CalendarIcon className="h-4 w-4 text-white" />
+                  </div>
+                )}
+                
                 {customerData.logo_url ? (
                   <img
                     src={customerData.logo_url}
@@ -230,6 +265,24 @@ export default function CustomerDetailPage() {
                     <CalendarIcon className="h-4 w-4 mr-1" />
                     {meetingsData.length} meetings
                   </span>
+                  {customerData.renewal_date && (
+                    <span className={`flex items-center ${
+                      isRenewalExpired(customerData.renewal_date) 
+                        ? 'text-red-600 font-medium' 
+                        : isRenewalDueSoon(customerData.renewal_date) 
+                        ? 'text-amber-600 font-medium' 
+                        : ''
+                    }`}>
+                      <CalendarIcon className="h-4 w-4 mr-1" />
+                      Renewal: {new Date(customerData.renewal_date).toLocaleDateString()}
+                      {isRenewalExpired(customerData.renewal_date) && (
+                        <span className="ml-1 text-red-600">❌ EXPIRED</span>
+                      )}
+                      {isRenewalDueSoon(customerData.renewal_date) && !isRenewalExpired(customerData.renewal_date) && (
+                        <span className="ml-1 text-amber-600">⚠️</span>
+                      )}
+                    </span>
+                  )}
                 </div>
                 
                 {/* Satisfaction Controls */}

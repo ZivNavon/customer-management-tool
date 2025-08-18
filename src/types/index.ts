@@ -31,6 +31,7 @@ export interface Customer {
   last_meeting_date?: string;
   is_at_risk?: boolean;
   is_satisfied?: boolean;
+  renewal_date?: string;
   created_at: string;
   updated_at: string;
   contacts?: Array<{

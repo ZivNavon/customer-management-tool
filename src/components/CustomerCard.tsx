@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
 import { Customer } from '@/lib/api';
-import { PencilIcon, TrashIcon, EnvelopeIcon, PhoneIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, EnvelopeIcon, PhoneIcon, CalendarIcon } from '@heroicons/react/24/outline';
 
 interface CustomerCardProps {
   customer: Customer;
@@ -29,6 +29,118 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
     return new Date(dateString).toLocaleDateString();
   };
 
+  // Check if renewal is within 6 months (182 days)
+  const isRenewalDueSoon = (renewalDate?: string) => {
+    if (!renewalDate) return false;
+    
+    const today = new Date();
+    const renewal = new Date(renewalDate);
+    const sixMonthsFromNow = new Date();
+    sixMonthsFromNow.setMonth(today.getMonth() + 6);
+    
+    return renewal <= sixMonthsFromNow && renewal >= today;
+  };
+
+  // Check if renewal date has passed
+  const isRenewalExpired = (renewalDate?: string) => {
+    if (!renewalDate) return false;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+    const renewal = new Date(renewalDate);
+    renewal.setHours(0, 0, 0, 0);
+    
+    return renewal < today;
+  };
+
+  // Get renewal status styling
+  const getRenewalStatus = (renewalDate?: string) => {
+    if (!renewalDate) return null;
+    
+    if (isRenewalExpired(renewalDate)) {
+      return {
+        containerClass: 'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200/50 dark:border-red-700/50',
+        textClass: 'text-red-600 dark:text-red-400',
+        valueClass: 'text-red-900 dark:text-red-100',
+        iconClass: 'bg-red-500/10',
+        iconColorClass: 'text-red-600 dark:text-red-400'
+      };
+    }
+    
+    if (isRenewalDueSoon(renewalDate)) {
+      return {
+        containerClass: 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-amber-200/50 dark:border-amber-700/50',
+        textClass: 'text-amber-600 dark:text-amber-400',
+        valueClass: 'text-amber-900 dark:text-amber-100',
+        iconClass: 'bg-amber-500/10',
+        iconColorClass: 'text-amber-600 dark:text-amber-400'
+      };
+    }
+    
+    return {
+      containerClass: 'bg-gray-50/70 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50',
+      textClass: 'text-gray-600 dark:text-gray-400',
+      valueClass: 'text-gray-900 dark:text-gray-100',
+      iconClass: 'bg-gray-500/10',
+      iconColorClass: 'text-gray-600 dark:text-gray-400'
+    };
+  };
+
+  // Check if last meeting is more than 3 months old
+  const isMeetingOverdue3Months = (meetingDate?: string) => {
+    if (!meetingDate) return true; // No meeting date means overdue
+    
+    const today = new Date();
+    const meeting = new Date(meetingDate);
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(today.getMonth() - 3);
+    
+    return meeting <= threeMonthsAgo;
+  };
+
+  // Check if last meeting is more than 6 months old
+  const isMeetingOverdue6Months = (meetingDate?: string) => {
+    if (!meetingDate) return true; // No meeting date means severely overdue
+    
+    const today = new Date();
+    const meeting = new Date(meetingDate);
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(today.getMonth() - 6);
+    
+    return meeting <= sixMonthsAgo;
+  };
+
+  // Get meeting status styling
+  const getMeetingStatus = (meetingDate?: string) => {
+    if (isMeetingOverdue6Months(meetingDate)) {
+      return {
+        containerClass: 'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200/50 dark:border-red-700/50',
+        textClass: 'text-red-600 dark:text-red-400',
+        valueClass: 'text-red-900 dark:text-red-100',
+        iconClass: 'bg-red-500/10',
+        iconColorClass: 'text-red-600 dark:text-red-400'
+      };
+    }
+    
+    if (isMeetingOverdue3Months(meetingDate)) {
+      return {
+        containerClass: 'bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-200/50 dark:border-orange-700/50',
+        textClass: 'text-orange-600 dark:text-orange-400',
+        valueClass: 'text-orange-900 dark:text-orange-100',
+        iconClass: 'bg-orange-500/10',
+        iconColorClass: 'text-orange-600 dark:text-orange-400'
+      };
+    }
+    
+    return {
+      containerClass: 'bg-gray-50/70 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50',
+      textClass: 'text-gray-600 dark:text-gray-400',
+      valueClass: 'text-gray-900 dark:text-gray-100',
+      iconClass: 'bg-gray-500/10',
+      iconColorClass: 'text-gray-600 dark:text-gray-400'
+    };
+  };
+
   return (
     <div className="group bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-gray-900/40 transition-all duration-300 hover:-translate-y-1">
       <Link href={`/customers/${customer.id}`}>
@@ -46,6 +158,17 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
               {customer.is_satisfied && !customer.is_at_risk && (
                 <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full shadow-lg flex items-center justify-center z-10 transform -rotate-12">
                   <span className="text-white text-xs font-bold">✓</span>
+                </div>
+              )}
+              
+              {/* Renewal Warning Indicator - appears on left side */}
+              {(isRenewalDueSoon(customer.renewal_date) || isRenewalExpired(customer.renewal_date)) && (
+                <div className={`absolute -top-1 -left-1 w-6 h-6 rounded-full shadow-lg flex items-center justify-center z-10 transform -rotate-12 ${
+                  isRenewalExpired(customer.renewal_date)
+                    ? 'bg-gradient-to-br from-red-500 to-red-600'
+                    : 'bg-gradient-to-br from-amber-500 to-orange-600'
+                }`}>
+                  <CalendarIcon className="h-3 w-3 text-white" />
                 </div>
               )}
               
@@ -113,20 +236,53 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
 
           {/* Last Meeting */}
           <div className="mb-6">
-            <div className="bg-gray-50/70 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Last Meeting</p>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            <div className={`rounded-xl p-4 border h-16 ${getMeetingStatus(customer.last_meeting_date)?.containerClass}`}>
+              <div className="flex items-center justify-between h-full">
+                <div className="flex-1 min-w-0">
+                  <p className={`text-xs font-medium uppercase tracking-wide ${getMeetingStatus(customer.last_meeting_date)?.textClass} truncate`}>
+                    {isMeetingOverdue6Months(customer.last_meeting_date) 
+                      ? 'MEETING OVERDUE' 
+                      : isMeetingOverdue3Months(customer.last_meeting_date) 
+                      ? 'MEETING DUE' 
+                      : 'LAST MEETING'
+                    }
+                  </p>
+                  <p className={`text-sm font-medium ${getMeetingStatus(customer.last_meeting_date)?.valueClass} truncate`}>
                     {formatDate(customer.last_meeting_date)}
                   </p>
                 </div>
-                <div className="w-8 h-8 bg-gray-500/10 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-600 dark:text-gray-400">🕒</span>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ml-2 ${getMeetingStatus(customer.last_meeting_date)?.iconClass}`}>
+                  <span className={`text-sm ${getMeetingStatus(customer.last_meeting_date)?.iconColorClass}`}>🕒</span>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Renewal Date */}
+          {customer.renewal_date && (
+            <div className="mb-6">
+              <div className={`rounded-xl p-4 border h-16 ${getRenewalStatus(customer.renewal_date)?.containerClass}`}>
+                <div className="flex items-center justify-between h-full">
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs font-medium uppercase tracking-wide ${getRenewalStatus(customer.renewal_date)?.textClass} truncate`}>
+                      {isRenewalExpired(customer.renewal_date) 
+                        ? 'EXPIRED' 
+                        : isRenewalDueSoon(customer.renewal_date) 
+                        ? 'DUE SOON' 
+                        : 'RENEWAL DATE'
+                      }
+                    </p>
+                    <p className={`text-sm font-medium ${getRenewalStatus(customer.renewal_date)?.valueClass} truncate`}>
+                      {formatDate(customer.renewal_date)}
+                    </p>
+                  </div>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ml-2 ${getRenewalStatus(customer.renewal_date)?.iconClass}`}>
+                    <CalendarIcon className={`h-4 w-4 ${getRenewalStatus(customer.renewal_date)?.iconColorClass}`} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Contacts Preview */}
           {customer.contacts && customer.contacts.length > 0 && (

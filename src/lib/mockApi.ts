@@ -15,6 +15,8 @@ interface CustomerCreateData {
   logo_url?: string;
   arr_usd: number;
   notes?: string;
+  renewal_date?: string;
+  last_meeting_date?: string;
   contacts?: Contact[];
 }
 
@@ -102,7 +104,8 @@ const getDefaultCustomers = (): Customer[] => [
     notes: 'Key client in healthcare sector',
     created_at: '2025-01-15T10:00:00Z',
     updated_at: '2025-01-15T10:00:00Z',
-    last_meeting_date: '2025-01-10',
+    last_meeting_date: '2024-06-15', // 7 months ago - should be red
+    renewal_date: '2025-12-31', // Within 6 months - should show warning
     contacts_count: 3,
     meetings_count: 5,
     contacts: [
@@ -132,7 +135,8 @@ const getDefaultCustomers = (): Customer[] => [
     notes: 'Growing startup, potential for expansion',
     created_at: '2025-01-10T14:30:00Z',
     updated_at: '2025-01-10T14:30:00Z',
-    last_meeting_date: '2025-01-08',
+    last_meeting_date: '2024-09-15', // 4 months ago - should be orange
+    renewal_date: '2025-08-17', // Expired (yesterday) - should show red
     contacts_count: 2,
     meetings_count: 3,
     contacts: [
@@ -154,7 +158,8 @@ const getDefaultCustomers = (): Customer[] => [
     notes: 'Agricultural technology company',
     created_at: '2025-01-05T09:00:00Z',
     updated_at: '2025-01-05T09:00:00Z',
-    last_meeting_date: '2025-01-12',
+    last_meeting_date: undefined, // No meeting date - should be red
+    renewal_date: '2026-06-30', // Beyond 6 months - no warning
     contacts_count: 1,
     meetings_count: 2,
     contacts: [
@@ -237,9 +242,10 @@ export const mockApi = {
         logo_url: data.logo_url,
         arr_usd: data.arr_usd,
         notes: data.notes || '',
+        renewal_date: data.renewal_date,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        last_meeting_date: undefined,
+        last_meeting_date: data.last_meeting_date,
         contacts_count: data.contacts?.length || 0,
         meetings_count: 0,
         contacts: data.contacts || []

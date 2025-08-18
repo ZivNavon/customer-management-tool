@@ -51,6 +51,7 @@ export interface Customer {
   meetings_count?: number;
   is_at_risk?: boolean;
   is_satisfied?: boolean;
+  renewal_date?: string;
   contacts?: Contact[];
 }
 
