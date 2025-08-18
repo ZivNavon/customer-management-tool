@@ -289,6 +289,11 @@ export const mockApi = {
   },
 
   meetings: {
+    list: async () => {
+      await delay(200);
+      return { data: mockMeetings };
+    },
+
     getByCustomer: async (customerId: string) => {
       await delay(300);
       const customerMeetings = mockMeetings.filter(m => m.customer_id === customerId)

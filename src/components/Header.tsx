@@ -2,17 +2,19 @@
 
 import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from './ThemeProvider';
 import { 
   UsersIcon,
   SunIcon,
-  MoonIcon
+  MoonIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
 
 export function Header() {
   const { t } = useTranslation();
   const pathname = usePathname();
+  const router = useRouter();
   
   // Safely get theme context
   let theme = 'light';
@@ -28,30 +30,43 @@ export function Header() {
 
   const navigation = [
     {
-      name: 'Customers & Dashboard',
+      name: 'Dashboard',
       href: '/',
       icon: UsersIcon,
       current: pathname === '/' || pathname.startsWith('/customers')
+    },
+    {
+      name: 'Analytics',
+      href: '/analytics',
+      icon: ChartBarIcon,
+      current: pathname === '/analytics'
     }
   ];
+
+  const handleNavigation = (href: string) => {
+    router.push(href);
+  };
 
   return (
     <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-8">
-            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent hover:from-blue-700 hover:to-purple-700 transition-all duration-200">
+            <button 
+              onClick={() => handleNavigation('/')}
+              className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent hover:from-blue-700 hover:to-purple-700 transition-all duration-200 active:scale-95"
+            >
               {t('app.title')}
-            </Link>
+            </button>
             
             <nav className="flex space-x-2">
               {navigation.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <Link
+                  <button
                     key={item.name}
-                    href={item.href}
-                    className={`flex items-center px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    onClick={() => handleNavigation(item.href)}
+                    className={`flex items-center px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95 ${
                       item.current
                         ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25'
                         : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100/70 dark:hover:bg-gray-800/70'
@@ -59,7 +74,7 @@ export function Header() {
                   >
                     <Icon className="h-4 w-4 mr-2" />
                     {item.name}
-                  </Link>
+                  </button>
                 );
               })}
             </nav>
