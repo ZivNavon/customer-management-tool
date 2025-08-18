@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from './ThemeProvider';
 import { 
-  ChartBarIcon, 
   UsersIcon,
   SunIcon,
   MoonIcon
@@ -30,13 +29,7 @@ export function Header() {
 
   const navigation = [
     {
-      name: 'Dashboard',
-      href: '/dashboard',
-      icon: ChartBarIcon,
-      current: pathname === '/dashboard'
-    },
-    {
-      name: 'Customers',
+      name: 'Customers & Dashboard',
       href: '/',
       icon: UsersIcon,
       current: pathname === '/' || pathname.startsWith('/customers')

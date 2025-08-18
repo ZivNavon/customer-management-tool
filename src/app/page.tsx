@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { customerApi, type Customer } from '@/lib/api';
@@ -9,7 +9,26 @@ import { CustomerCard } from '@/components/CustomerCard';
 import { CustomerModal } from '@/components/CustomerModal';
 import { Header } from '@/components/Header';
 import { exportCustomersToFile, importCustomersFromFile } from '@/lib/fileStorage';
-import { PlusIcon, MagnifyingGlassIcon, ArrowDownTrayIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
+import { 
+  PlusIcon, 
+  MagnifyingGlassIcon, 
+  ArrowDownTrayIcon, 
+  ArrowUpTrayIcon,
+  ChartBarIcon,
+  UsersIcon,
+  CalendarIcon,
+  ExclamationTriangleIcon,
+  CurrencyDollarIcon
+} from '@heroicons/react/24/outline';
+
+interface CustomerStats {
+  totalCustomers: number;
+  totalARR: number;
+  avgMeetingsPerCustomer: number;
+  totalMeetings: number;
+  atRiskCustomers: number;
+  recentMeetings: number;
+}
 
 export default function Home() {
   const { t } = useTranslation();
@@ -18,6 +37,14 @@ export default function Home() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | undefined>(undefined);
+  const [stats, setStats] = useState<CustomerStats>({
+    totalCustomers: 0,
+    totalARR: 0,
+    avgMeetingsPerCustomer: 0,
+    totalMeetings: 0,
+    atRiskCustomers: 0,
+    recentMeetings: 0
+  });
 
   // Use mock API for development when backend is not available
   const { data: customers, isLoading, error } = useQuery({
@@ -33,6 +60,57 @@ export default function Home() {
   });
 
   const filteredCustomers = customers?.data || [];
+
+  // Calculate statistics
+  useEffect(() => {
+    if (filteredCustomers.length > 0) {
+      calculateStats(filteredCustomers);
+    }
+  }, [filteredCustomers]);
+
+  const calculateStats = (customers: Customer[]) => {
+    const totalCustomers = customers.length;
+    const totalARR = customers.reduce((sum, customer) => sum + (customer.arr_usd || 0), 0);
+    const totalMeetings = customers.reduce((sum, customer) => sum + (customer.meetings_count || 0), 0);
+    const avgMeetingsPerCustomer = totalCustomers > 0 ? Math.round(totalMeetings / totalCustomers * 10) / 10 : 0;
+    
+    // Recent meetings (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const recentMeetings = customers.filter(customer => {
+      if (!customer.last_meeting_date) return false;
+      const lastMeeting = new Date(customer.last_meeting_date);
+      return lastMeeting >= thirtyDaysAgo;
+    }).length;
+
+    // Calculate at-risk customers (no meeting in 60+ days or low engagement)
+    const atRiskCustomers = customers.filter(customer => {
+      const daysSinceLastMeeting = customer.last_meeting_date 
+        ? Math.floor((new Date().getTime() - new Date(customer.last_meeting_date).getTime()) / (1000 * 60 * 60 * 24))
+        : 999;
+      
+      return daysSinceLastMeeting > 60 || (customer.meetings_count || 0) < 2;
+    }).length;
+
+    setStats({
+      totalCustomers,
+      totalARR,
+      avgMeetingsPerCustomer,
+      totalMeetings,
+      atRiskCustomers,
+      recentMeetings
+    });
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -90,6 +168,78 @@ export default function Home() {
       <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Dashboard Overview */}
+        <div className="mb-8">
+          <div className="flex items-center mb-4">
+            <ChartBarIcon className="h-6 w-6 text-blue-600 dark:text-blue-400 mr-2" />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Overview</h2>
+          </div>
+          
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Total Customers */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                  <UsersIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Customers</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.totalCustomers}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Total ARR */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                  <CurrencyDollarIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total ARR</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(stats.totalARR)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Total Meetings */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                  <CalendarIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Meetings</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.totalMeetings}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500">Avg: {stats.avgMeetingsPerCustomer}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* At Risk Customers */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center">
+                <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+                  <ExclamationTriangleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">At Risk</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.atRiskCustomers}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500">{stats.recentMeetings} recent</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Customer Management Section */}
+        <div className="mb-4">
+          <div className="flex items-center mb-4">
+            <UsersIcon className="h-6 w-6 text-blue-600 dark:text-blue-400 mr-2" />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('customers.title')}</h2>
+          </div>
+        </div>
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex-1 max-w-lg">
