@@ -9,7 +9,15 @@
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "test": "echo \"Tests will be added later\" && exit 0",
-    "test:watch": "echo \"Test watch mode will be added later\" && exit 0"
+    "test:watch": "echo \"Test watch mode will be added later\" && exit 0",
+    "release:patch": "node scripts/version-manager.js patch",
+    "release:minor": "node scripts/version-manager.js minor",
+    "release:major": "node scripts/version-manager.js major",
+    "sync": "node scripts/github-sync.js sync",
+    "pull": "node scripts/github-sync.js pull",
+    "push": "node scripts/github-sync.js push",
+    "git:status": "node scripts/github-sync.js status",
+    "deploy": "npm run build && npm run sync"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",
