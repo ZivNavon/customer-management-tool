@@ -30,55 +30,88 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md dark:hover:shadow-gray-700/50 transition-shadow duration-200">
+    <div className="group bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-gray-900/40 transition-all duration-300 hover:-translate-y-1">
       <Link href={`/customers/${customer.id}`}>
         <div className="p-6 cursor-pointer">
           {/* Logo and Name */}
-          <div className="flex items-center mb-4">
-            <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+          <div className="flex items-center mb-6">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mr-4 flex-shrink-0 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
               {customer.logo_url ? (
                 <Image
                   src={customer.logo_url}
                   alt={customer.name}
-                  width={48}
-                  height={48}
-                  className="w-12 h-12 rounded-full object-cover"
+                  width={56}
+                  height={56}
+                  className="w-14 h-14 rounded-2xl object-cover"
                   onError={(e) => {
                     // Hide the image and show fallback if there's an error
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
                     const parent = target.parentElement;
                     if (parent) {
-                      parent.innerHTML = `<span class="text-lg font-semibold text-gray-600 dark:text-gray-300">${customer.name.charAt(0).toUpperCase()}</span>`;
+                      parent.innerHTML = `<span class="text-xl font-bold text-white">${customer.name.charAt(0).toUpperCase()}</span>`;
                     }
                   }}
                 />
               ) : (
-                <span className="text-lg font-semibold text-gray-600 dark:text-gray-300">
+                <span className="text-xl font-bold text-white">
                   {customer.name.charAt(0).toUpperCase()}
                 </span>
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                 {customer.name}
               </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Customer since {new Date(customer.created_at || '').getFullYear() || 'Recently'}
+              </p>
             </div>
           </div>
 
-          {/* ARR */}
-          <div className="mb-3">
-            <span className="text-sm text-gray-500 dark:text-gray-400">{t('customer.arr')}</span>
-            <div className="text-lg font-semibold text-green-600 dark:text-green-400">
-              {formatCurrency(customer.arr_usd)}
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {/* ARR */}
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200/50 dark:border-green-700/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">ARR</p>
+                  <p className="text-lg font-bold text-green-700 dark:text-green-300">{formatCurrency(customer.arr || 0)}</p>
+                </div>
+                <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
+                  <span className="text-green-600 dark:text-green-400">💰</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Meetings */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">Meetings</p>
+                  <p className="text-lg font-bold text-blue-700 dark:text-blue-300">{customer.meetings_count || 0}</p>
+                </div>
+                <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                  <span className="text-blue-600 dark:text-blue-400">📅</span>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Last Meeting */}
-          <div className="mb-4">
-            <span className="text-sm text-gray-500 dark:text-gray-400">{t('customer.lastMeeting')}</span>
-            <div className="text-sm text-gray-900 dark:text-gray-100">
-              {formatDate(customer.last_meeting_date)}
+          <div className="mb-6">
+            <div className="bg-gray-50/70 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Last Meeting</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {formatDate(customer.last_meeting_date)}
+                  </p>
+                </div>
+                <div className="w-8 h-8 bg-gray-500/10 rounded-lg flex items-center justify-center">
+                  <span className="text-gray-600 dark:text-gray-400">🕒</span>
+                </div>
+              </div>
             </div>
           </div>
 

@@ -164,40 +164,42 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Dashboard Overview */}
-        <div className="mb-8">
-          <div className="flex items-center mb-4">
-            <ChartBarIcon className="h-6 w-6 text-blue-600 dark:text-blue-400 mr-2" />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Overview</h2>
+        <div className="mb-10">
+          <div className="flex items-center mb-6">
+            <div className="p-2.5 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg mr-3">
+              <ChartBarIcon className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard Overview</h2>
+              <p className="text-gray-600 dark:text-gray-400">Monitor your customer relationships and business metrics</p>
+            </div>
           </div>
           
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {/* Total Customers */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                  <UsersIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <div className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6 transition-all duration-300 hover:-translate-y-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2">Total Customers</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalCustomers}</p>
                 </div>
-                <div className="ml-3">
-                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Customers</p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.totalCustomers}</p>
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg group-hover:shadow-blue-500/25 transition-all duration-300 group-hover:scale-110">
+                  <UsersIcon className="h-6 w-6 text-white" />
                 </div>
               </div>
             </div>
 
             {/* Total ARR */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                  <CurrencyDollarIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total ARR</p>
+            <div className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6 transition-all duration-300 hover:-translate-y-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-green-600 dark:text-green-400 uppercase tracking-wider mb-2">Total ARR</p>
                   <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(stats.totalARR)}</p>
                 </div>
               </div>
