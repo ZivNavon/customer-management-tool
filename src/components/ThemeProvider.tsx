@@ -28,11 +28,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (mounted && typeof window !== 'undefined') {
       localStorage.setItem('theme', theme);
       
-      // Apply theme to document
+      // Apply theme to document root
+      const root = document.documentElement;
       if (theme === 'dark') {
-        document.documentElement.classList.add('dark');
+        root.classList.add('dark');
       } else {
-        document.documentElement.classList.remove('dark');
+        root.classList.remove('dark');
+      }
+      
+      // Also apply to body for immediate effect
+      document.body.className = document.body.className
+        .replace(/\bdark\b/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      if (theme === 'dark') {
+        document.body.classList.add('dark');
       }
     }
   }, [theme, mounted]);
@@ -48,9 +59,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      <div className={theme === 'dark' ? 'dark' : ''}>
-        {children}
-      </div>
+      {children}
     </ThemeContext.Provider>
   );
 }

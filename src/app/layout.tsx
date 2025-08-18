@@ -40,11 +40,13 @@ export default function RootLayout({
   return (
     <html lang={i18n.language} dir={direction}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased transition-colors duration-200`}
       >
         <ThemeProvider>
           <QueryClientProvider client={queryClient}>
-            {children}
+            <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+              {children}
+            </div>
           </QueryClientProvider>
         </ThemeProvider>
       </body>
