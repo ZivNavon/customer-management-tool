@@ -17,7 +17,7 @@ import {
 import { aiAnalyticsService, type AnalyticsFilter, type AnalyticsReport, type MeetingData } from '@/lib/aiAnalytics';
 import { mockApi } from '@/lib/mockApi';
 import { addSampleMeetingData } from '@/lib/sampleMeetings';
-import { type Meeting, type Customer } from '@/types';
+import { type Meeting, type Customer, type Task } from '@/types';
 import { Header } from '@/components/Header';
 
 interface CustomerWithMeetings {
@@ -140,6 +140,37 @@ export default function AnalyticsPage() {
     }
   });
 
+  // Fetch all tasks data
+  const { data: allTasksData = [] } = useQuery({
+    queryKey: ['allTasks'],
+    queryFn: async () => {
+      try {
+        // Get all customers first, then fetch tasks for each
+        const customersResponse = await mockApi.customers.getAll();
+        const customers = customersResponse.data || [];
+        
+        const allTasks = [];
+        for (const customer of customers) {
+          try {
+            const tasksResponse = await mockApi.tasks.getByCustomer(customer.id);
+            const customerTasks = (tasksResponse.data || []).map((task: Task) => ({
+              ...task,
+              customer_name: customer.name
+            }));
+            allTasks.push(...customerTasks);
+          } catch (error) {
+            console.error(`Failed to fetch tasks for customer ${customer.id}:`, error);
+          }
+        }
+        
+        return allTasks;
+      } catch (error) {
+        console.error('Failed to fetch tasks:', error);
+        return [];
+      }
+    }
+  });
+
   // Transform meetings to the format expected by AI service
   const transformedMeetings: MeetingData[] = useMemo(() => meetingsData.map((meeting: any) => ({
     id: meeting.id || Date.now().toString(),
@@ -217,7 +248,7 @@ export default function AnalyticsPage() {
         return;
       }
       
-      const report = await aiAnalyticsService.generateReport(selectedMeetings, filters);
+      const report = await aiAnalyticsService.generateReport(selectedMeetings, allTasksData, filters);
       setCurrentReport(report);
     } catch (error) {
       console.error('Failed to generate report:', error);

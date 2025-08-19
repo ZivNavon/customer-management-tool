@@ -1,4 +1,5 @@
 import { Customer } from './api';
+import { Task } from '../types';
 
 // Define proper types for API responses
 interface Contact {
@@ -38,6 +39,7 @@ interface Meeting {
 // Storage keys for localStorage
 const STORAGE_KEY = 'customers_mock_data';
 const MEETINGS_STORAGE_KEY = 'meetings_mock_data';
+const TASKS_STORAGE_KEY = 'tasks_mock_data';
 
 // Meeting storage functions
 const loadMeetings = (): Meeting[] => {
@@ -62,6 +64,32 @@ const saveMeetings = (meetings: Meeting[]) => {
     localStorage.setItem(MEETINGS_STORAGE_KEY, JSON.stringify(meetings));
   } catch (error) {
     console.warn('Failed to save meetings to localStorage:', error);
+  }
+};
+
+// Task storage functions
+const loadTasks = (): Task[] => {
+  if (typeof window === 'undefined') return [];
+  
+  try {
+    const stored = localStorage.getItem(TASKS_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.warn('Failed to load tasks from localStorage:', error);
+  }
+  
+  return [];
+};
+
+const saveTasks = (tasks: Task[]) => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
+  } catch (error) {
+    console.warn('Failed to save tasks to localStorage:', error);
   }
 };
 
@@ -178,8 +206,10 @@ const getDefaultCustomers = (): Customer[] => [
 // Initialize customers data and nextId
 let mockCustomers = loadCustomers();
 let mockMeetings = loadMeetings();
+let mockTasks = loadTasks();
 let nextId = Math.max(...mockCustomers.map(c => parseInt(c.id)), 3) + 1;
 let nextMeetingId = Math.max(...mockMeetings.map(m => parseInt(m.id)), 0) + 1;
+let nextTaskId = Math.max(...mockTasks.map(t => parseInt(t.id)), 0) + 1;
 
 // Mock delay to simulate network request
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -391,20 +421,139 @@ export const mockApi = {
     }
   },
 
+  // Task management functions
+  tasks: {
+    getAll: async () => {
+      await delay(300);
+      return { data: mockTasks };
+    },
+
+    getByCustomer: async (customerId: string) => {
+      await delay(300);
+      const customerTasks = mockTasks.filter(task => task.customer_id === customerId);
+      return { data: customerTasks };
+    },
+
+    create: async (taskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>) => {
+      await delay(500);
+      
+      const newTask: Task = {
+        ...taskData,
+        id: nextTaskId.toString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      mockTasks.push(newTask);
+      saveTasks(mockTasks);
+      nextTaskId++;
+
+      return { data: newTask };
+    },
+
+    update: async (id: string, updates: Partial<Omit<Task, 'id' | 'created_at'>>) => {
+      await delay(400);
+      
+      const taskIndex = mockTasks.findIndex(task => task.id === id);
+      if (taskIndex === -1) {
+        throw new Error('Task not found');
+      }
+
+      const updatedTask = {
+        ...mockTasks[taskIndex],
+        ...updates,
+        updated_at: new Date().toISOString(),
+        ...(updates.status === 'completed' && !mockTasks[taskIndex].completed_at 
+          ? { completed_at: new Date().toISOString() } 
+          : {})
+      };
+
+      mockTasks[taskIndex] = updatedTask;
+      saveTasks(mockTasks);
+
+      return { data: updatedTask };
+    },
+
+    delete: async (id: string) => {
+      await delay(300);
+      
+      const taskIndex = mockTasks.findIndex(task => task.id === id);
+      if (taskIndex === -1) {
+        throw new Error('Task not found');
+      }
+
+      mockTasks.splice(taskIndex, 1);
+      saveTasks(mockTasks);
+
+      return { data: { message: 'Task deleted successfully' } };
+    },
+
+    createFromMeetingNextSteps: async (meetingId: string, customerId: string, nextSteps: string) => {
+      await delay(400);
+      
+      // Split next steps into individual tasks (by line breaks or semicolons)
+      const taskLines = nextSteps.split(/\n|;/).filter(line => line.trim().length > 0);
+      const createdTasks: Task[] = [];
+
+      for (const taskLine of taskLines) {
+        const trimmedTask = taskLine.trim();
+        if (trimmedTask) {
+          const newTask: Task = {
+            id: nextTaskId.toString(),
+            title: trimmedTask,
+            description: `Auto-generated from meeting next steps`,
+            priority: 'medium',
+            status: 'pending',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            customer_id: customerId,
+            source: 'meeting_next_steps',
+            source_meeting_id: meetingId
+          };
+
+          mockTasks.push(newTask);
+          createdTasks.push(newTask);
+          nextTaskId++;
+        }
+      }
+
+      saveTasks(mockTasks);
+      return { data: createdTasks };
+    },
+
+    getCompleted: async (customerId?: string) => {
+      await delay(300);
+      let completedTasks = mockTasks.filter(task => task.status === 'completed');
+      
+      if (customerId) {
+        completedTasks = completedTasks.filter(task => task.customer_id === customerId);
+      }
+
+      return { data: completedTasks };
+    }
+  },
+
   // Utility functions for development
   utils: {
     clearAll: () => {
       if (typeof window !== 'undefined') {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(MEETINGS_STORAGE_KEY);
+        localStorage.removeItem(TASKS_STORAGE_KEY);
         mockCustomers = getDefaultCustomers();
         mockMeetings = [];
+        mockTasks = [];
         nextId = 3;
         nextMeetingId = 1;
+        nextTaskId = 1;
       }
     },
     
-    getStoredCount: () => ({ customers: mockCustomers.length, meetings: mockMeetings.length }),
+    getStoredCount: () => ({ 
+      customers: mockCustomers.length, 
+      meetings: mockMeetings.length, 
+      tasks: mockTasks.length 
+    }),
     
     resetToDefaults: () => {
       const defaultCustomers = getDefaultCustomers();
@@ -412,8 +561,11 @@ export const mockApi = {
       mockCustomers = defaultCustomers;
       mockMeetings = [];
       saveMeetings(mockMeetings);
+      mockTasks = [];
+      saveTasks(mockTasks);
       nextId = 3;
       nextMeetingId = 1;
+      nextTaskId = 1;
     }
   }
 };

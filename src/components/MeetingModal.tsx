@@ -174,9 +174,25 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
         return await mockApi.meetings.create(data);
       }
     },
-    onSuccess: () => {
+    onSuccess: async (response, variables) => {
       queryClient.invalidateQueries({ queryKey: ['meetings', customerId] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      
+      // Auto-create tasks from next steps if they exist
+      const nextSteps = variables.next_steps as string;
+      if (nextSteps && nextSteps.trim()) {
+        try {
+          await mockApi.tasks.createFromMeetingNextSteps(
+            response.data.id, 
+            customerId, 
+            nextSteps
+          );
+          queryClient.invalidateQueries({ queryKey: ['tasks', customerId] });
+        } catch (error) {
+          console.log('Failed to create tasks from next steps:', error);
+        }
+      }
+      
       onClose();
       resetForm();
     },
@@ -192,9 +208,26 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
         return await mockApi.meetings.update(meeting.id, data);
       }
     },
-    onSuccess: () => {
+    onSuccess: async (response, variables) => {
       queryClient.invalidateQueries({ queryKey: ['meetings', customerId] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      
+      // Auto-create tasks from next steps if they exist and it's a new next steps value
+      const nextSteps = variables.next_steps as string;
+      const oldNextSteps = meeting?.next_steps;
+      if (nextSteps && nextSteps.trim() && nextSteps !== oldNextSteps) {
+        try {
+          await mockApi.tasks.createFromMeetingNextSteps(
+            meeting!.id, 
+            customerId, 
+            nextSteps
+          );
+          queryClient.invalidateQueries({ queryKey: ['tasks', customerId] });
+        } catch (error) {
+          console.log('Failed to create tasks from next steps:', error);
+        }
+      }
+      
       onClose();
       resetForm();
     },

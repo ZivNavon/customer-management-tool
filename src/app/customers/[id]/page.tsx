@@ -10,14 +10,18 @@ import { Header } from '@/components/Header';
 import { MeetingModal } from '@/components/MeetingModal';
 import { MeetingCard } from '@/components/MeetingCard';
 import { ContactsModal } from '@/components/ContactsModal';
-import type { Meeting, Customer } from '@/types';
+import TaskModal from '@/components/TaskModal';
+import TaskCard from '@/components/TaskCard';
+import SimpleTasks from '@/components/SimpleTasks';
+import type { Meeting, Customer, Task } from '@/types';
 import { 
   PlusIcon, 
   ArrowLeftIcon, 
   CalendarIcon, 
   UserGroupIcon,
   PhoneIcon,
-  EnvelopeIcon
+  EnvelopeIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 
 export default function CustomerDetailPage() {
@@ -31,6 +35,8 @@ export default function CustomerDetailPage() {
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | undefined>(undefined);
   const [showEditMeeting, setShowEditMeeting] = useState(false);
   const [showContactsModal, setShowContactsModal] = useState(false);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   // Fetch customer data
   const { data: customer, isLoading: customerLoading } = useQuery({
@@ -58,8 +64,22 @@ export default function CustomerDetailPage() {
     },
   });
 
+  // Fetch customer tasks
+  const { data: tasks, isLoading: tasksLoading } = useQuery({
+    queryKey: ['tasks', customerId],
+    queryFn: async () => {
+      try {
+        return await mockApi.tasks.getByCustomer(customerId);
+      } catch (error) {
+        console.log('Error fetching tasks:', error);
+        return { data: [] };
+      }
+    },
+  });
+
   const customerData = customer?.data;
   const meetingsData = meetings?.data || [];
+  const tasksData = tasks?.data || [];
 
   // Mutation for updating customer satisfaction status
   const updateSatisfactionMutation = useMutation({
@@ -116,6 +136,90 @@ export default function CustomerDetailPage() {
         value: checked 
       });
     }
+  };
+
+  // Task mutations
+  const createTaskMutation = useMutation({
+    mutationFn: async (taskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>) => {
+      return await mockApi.tasks.create(taskData);
+    },
+    onSuccess: () => {
+      _queryClient.invalidateQueries({ queryKey: ['tasks', customerId] });
+    },
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Omit<Task, 'id' | 'created_at'>> }) => {
+      return await mockApi.tasks.update(id, updates);
+    },
+    onSuccess: () => {
+      _queryClient.invalidateQueries({ queryKey: ['tasks', customerId] });
+    },
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      return await mockApi.tasks.delete(taskId);
+    },
+    onSuccess: () => {
+      _queryClient.invalidateQueries({ queryKey: ['tasks', customerId] });
+    },
+  });
+
+  // Task handlers
+  const handleTaskSave = (taskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>) => {
+    if (selectedTask) {
+      updateTaskMutation.mutate({ id: selectedTask.id, updates: taskData });
+    } else {
+      createTaskMutation.mutate(taskData);
+    }
+  };
+
+  const handleSimpleTaskCreate = (title: string, dueDate?: string) => {
+    const taskData = {
+      title,
+      description: '',
+      due_date: dueDate,
+      priority: 'medium' as const,
+      status: 'pending' as const,
+      customer_id: customerId,
+      source: 'manual' as const
+    };
+    createTaskMutation.mutate(taskData);
+  };
+
+  const handleTaskEdit = (task: Task) => {
+    setSelectedTask(task);
+    setShowTaskModal(true);
+  };
+
+  const handleTaskDelete = (taskId: string) => {
+    if (confirm('Are you sure you want to delete this task?')) {
+      deleteTaskMutation.mutate(taskId);
+    }
+  };
+
+  const handleTaskStatusChange = (taskId: string, status: Task['status']) => {
+    updateTaskMutation.mutate({ 
+      id: taskId, 
+      updates: { 
+        status,
+        ...(status === 'completed' ? { completed_at: new Date().toISOString() } : {})
+      } 
+    });
+  };
+
+  const handleSimpleTaskComplete = (taskId: string) => {
+    const task = tasksData.find(t => t.id === taskId);
+    if (task) {
+      const newStatus = task.status === 'completed' ? 'pending' : 'completed';
+      handleTaskStatusChange(taskId, newStatus);
+    }
+  };
+
+  const handleTaskModalClose = () => {
+    setShowTaskModal(false);
+    setSelectedTask(null);
   };
 
   // Check if renewal is within 6 months (182 days)
@@ -265,6 +369,10 @@ export default function CustomerDetailPage() {
                     <CalendarIcon className="h-4 w-4 mr-1" />
                     {meetingsData.length} meetings
                   </span>
+                  <span className="flex items-center">
+                    <ClockIcon className="h-4 w-4 mr-1" />
+                    {tasksData.length} tasks
+                  </span>
                   {customerData.renewal_date && (
                     <span className={`flex items-center ${
                       isRenewalExpired(customerData.renewal_date) 
@@ -285,27 +393,41 @@ export default function CustomerDetailPage() {
                   )}
                 </div>
                 
-                {/* Satisfaction Controls */}
-                <div className="flex items-center space-x-6 mt-4">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={customerData.is_at_risk || false}
-                      onChange={(e) => handleSatisfactionChange('is_at_risk', e.target.checked)}
-                      className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2"
-                    />
-                    <span className="text-sm font-medium text-red-600">At Risk</span>
-                  </label>
-                  
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={customerData.is_satisfied || false}
-                      onChange={(e) => handleSatisfactionChange('is_satisfied', e.target.checked)}
-                      className="w-4 h-4 text-emerald-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2"
-                    />
-                    <span className="text-sm font-medium text-emerald-600">Satisfied</span>
-                  </label>
+                {/* Satisfaction Controls and Notes */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+                  {/* Satisfaction Controls */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Customer Status</label>
+                    <div className="flex items-center space-x-6">
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={customerData.is_at_risk || false}
+                          onChange={(e) => handleSatisfactionChange('is_at_risk', e.target.checked)}
+                          className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2"
+                        />
+                        <span className="text-sm font-medium text-red-600">At Risk</span>
+                      </label>
+                      
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={customerData.is_satisfied || false}
+                          onChange={(e) => handleSatisfactionChange('is_satisfied', e.target.checked)}
+                          className="w-4 h-4 text-emerald-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2"
+                        />
+                        <span className="text-sm font-medium text-emerald-600">Satisfied</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Notes</label>
+                    <p className="text-sm text-gray-600 bg-gray-50 rounded-md p-3 min-h-[2.5rem]">
+                      {customerData.notes || 'No notes added yet...'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -457,6 +579,43 @@ export default function CustomerDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Tasks Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-600">
+          <div className="bg-gradient-to-r from-purple-500 to-pink-600 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="p-2 bg-white/20 rounded-lg mr-3">
+                  <ClockIcon className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Tasks</h2>
+                  <p className="text-purple-100 text-sm">
+                    {tasksData.filter(t => t.status !== 'completed').length} active, {tasksData.filter(t => t.status === 'completed').length} completed
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTaskModal(true)}
+                className="bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-xl hover:bg-white/30 transition-all flex items-center space-x-2 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <PlusIcon className="h-5 w-5" />
+                <span>Add Task</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Tasks List */}
+          <div className="p-6">
+            <SimpleTasks
+              tasks={tasksData || []}
+              onTaskCreate={handleSimpleTaskCreate}
+              onTaskEdit={handleTaskEdit}
+              onTaskDelete={handleTaskDelete}
+              onTaskComplete={handleSimpleTaskComplete}
+            />
+          </div>
+        </div>
       </main>
 
       {/* Add Meeting Modal */}
@@ -487,6 +646,18 @@ export default function CustomerDetailPage() {
           onClose={() => setShowContactsModal(false)}
           contacts={customerData.contacts || []}
           customerName={customerData.name}
+        />
+      )}
+
+      {/* Task Modal */}
+      {showTaskModal && (
+        <TaskModal
+          isOpen={showTaskModal}
+          onClose={handleTaskModalClose}
+          onSave={handleTaskSave}
+          customerId={customerId}
+          task={selectedTask}
+          title={selectedTask ? 'Edit Task' : 'Add Task'}
         />
       )}
     </div>

@@ -43,6 +43,7 @@ export interface Customer {
     phone: string;
     notes?: string;
   }>;
+  tasks?: Task[];
 }
 
 export interface Contact {
@@ -53,4 +54,19 @@ export interface Contact {
   email: string;
   phone: string;
   notes?: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  due_date?: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'in_progress' | 'completed';
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
+  customer_id: string;
+  source?: 'manual' | 'meeting_next_steps';
+  source_meeting_id?: string;
 }

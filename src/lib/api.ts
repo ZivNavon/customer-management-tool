@@ -53,6 +53,7 @@ export interface Customer {
   is_satisfied?: boolean;
   renewal_date?: string;
   contacts?: Contact[];
+  tasks?: Task[];
 }
 
 export interface Meeting {
@@ -95,6 +96,21 @@ export interface EmailDraft {
   language: string;
   created_by_ai: boolean;
   created_at: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  due_date?: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'in_progress' | 'completed';
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
+  customer_id: string;
+  source?: 'manual' | 'meeting_next_steps';
+  source_meeting_id?: string;
 }
 
 export interface User {
@@ -153,4 +169,19 @@ export const meetingApi = {
     api.post(`/meetings/${meetingId}/ai/summarize`, null, { params: { language } }),
   generateEmailDraft: (meetingId: string, language: string = 'en') =>
     api.post(`/meetings/${meetingId}/ai/draft-email`, null, { params: { language } }),
+};
+
+export const taskApi = {
+  getByCustomer: (customerId: string) =>
+    api.get(`/customers/${customerId}/tasks`),
+  getById: (id: string) => api.get(`/tasks/${id}`),
+  create: (data: Omit<Task, 'id' | 'created_at' | 'updated_at'>) =>
+    api.post(`/customers/${data.customer_id}/tasks`, data),
+  update: (id: string, data: Partial<Task>) =>
+    api.put(`/tasks/${id}`, data),
+  delete: (id: string) => api.delete(`/tasks/${id}`),
+  createFromMeetingNextSteps: (meetingId: string, customerId: string, nextSteps: string) =>
+    api.post(`/meetings/${meetingId}/create-tasks`, { customer_id: customerId, next_steps: nextSteps }),
+  getCompleted: (customerId?: string) =>
+    api.get('/tasks/completed', { params: customerId ? { customer_id: customerId } : {} }),
 };

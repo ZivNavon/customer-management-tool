@@ -13,6 +13,20 @@ interface MeetingData {
   outcome?: string;
 }
 
+interface TaskData {
+  id: string;
+  customer_id: string;
+  customer_name?: string;
+  title: string;
+  description?: string;
+  due_date?: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'in_progress' | 'completed';
+  created_at: string;
+  completed_at?: string;
+  source?: 'manual' | 'meeting_next_steps';
+}
+
 interface AnalyticsFilter {
   timeRange: 'week' | 'month' | 'quarter' | 'year';
   customers: string[];
@@ -32,6 +46,11 @@ interface AnalyticsReport {
     averageMeetingsPerWeek: number;
     topCustomers: { name: string; meetingCount: number }[];
     meetingTrends: { date: string; count: number }[];
+    totalTasks: number;
+    completedTasks: number;
+    taskCompletionRate: number;
+    tasksByPriority: { priority: string; count: number }[];
+    overdueTasks: number;
   };
   generatedAt: string;
 }
@@ -46,24 +65,32 @@ class AIAnalyticsService {
 
   async generateReport(
     meetingsData: MeetingData[], 
+    tasksData: TaskData[],
     filters: AnalyticsFilter
   ): Promise<AnalyticsReport> {
     // Filter meetings based on criteria
     const filteredMeetings = this.filterMeetings(meetingsData, filters);
     
+    // Filter tasks based on criteria
+    const filteredTasks = this.filterTasks(tasksData, filters);
+    
     // Aggregate data for analysis
     const aggregatedData = this.aggregateMeetingData(filteredMeetings);
+    const aggregatedTaskData = this.aggregateTaskData(filteredTasks);
+    
+    // Combine the data
+    const combinedData = { ...aggregatedData, ...aggregatedTaskData };
     
     // Generate AI insights
-    const aiInsights = await this.generateAIInsights(filteredMeetings, aggregatedData, filters);
+    const aiInsights = await this.generateAIInsights(filteredMeetings, filteredTasks, combinedData, filters);
     
     return {
       id: Date.now().toString(),
-      title: `Meeting Analysis Report - ${filters.timeRange.charAt(0).toUpperCase() + filters.timeRange.slice(1)}`,
+      title: `Business Analysis Report - ${filters.timeRange.charAt(0).toUpperCase() + filters.timeRange.slice(1)}`,
       summary: aiInsights.summary,
       insights: aiInsights.insights,
       recommendations: aiInsights.recommendations,
-      data: aggregatedData,
+      data: combinedData,
       generatedAt: new Date().toISOString()
     };
   }
@@ -150,6 +177,70 @@ class AIAnalyticsService {
     };
   }
 
+  private filterTasks(tasks: TaskData[], filters: AnalyticsFilter): TaskData[] {
+    const now = new Date();
+    let startDate: Date;
+
+    // Calculate date range based on time filter
+    switch (filters.timeRange) {
+      case 'week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case 'quarter':
+        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case 'year':
+        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
+
+    const endDate = filters.dateTo ? new Date(filters.dateTo) : now;
+    if (filters.dateFrom) {
+      startDate = new Date(filters.dateFrom);
+    }
+
+    return tasks.filter(task => {
+      const taskDate = new Date(task.created_at);
+      const inDateRange = taskDate >= startDate && taskDate <= endDate;
+      const inCustomerFilter = filters.customers.length === 0 || filters.customers.includes(task.customer_id);
+      
+      return inDateRange && inCustomerFilter;
+    });
+  }
+
+  private aggregateTaskData(tasks: TaskData[]) {
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.status === 'completed').length;
+    const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    // Tasks by priority
+    const tasksByPriority = ['high', 'medium', 'low'].map(priority => ({
+      priority,
+      count: tasks.filter(t => t.priority === priority).length
+    }));
+
+    // Overdue tasks (tasks with due dates that have passed and aren't completed)
+    const now = new Date();
+    const overdueTasks = tasks.filter(task => {
+      return task.status !== 'completed' && 
+             task.due_date && 
+             new Date(task.due_date) < now;
+    }).length;
+
+    return {
+      totalTasks,
+      completedTasks,
+      taskCompletionRate,
+      tasksByPriority,
+      overdueTasks
+    };
+  }
+
   private generateMeetingTrends(meetings: MeetingData[]) {
     const dailyCounts = meetings.reduce((acc, meeting) => {
       const date = new Date(meeting.date).toISOString().split('T')[0];
@@ -164,12 +255,13 @@ class AIAnalyticsService {
 
   private async generateAIInsights(
     meetings: MeetingData[], 
+    tasks: TaskData[],
     data: any, 
     filters: AnalyticsFilter
   ): Promise<{ summary: string; insights: string[]; recommendations: string[] }> {
     // If no API key, return mock insights
     if (!this.apiKey) {
-      return this.generateMockInsights(meetings, data, filters);
+      return this.generateMockInsights(meetings, tasks, data, filters);
     }
 
     try {
@@ -209,7 +301,7 @@ class AIAnalyticsService {
       return this.parseAIResponse(content);
     } catch (error) {
       console.error('AI analysis failed:', error);
-      return this.generateMockInsights(meetings, data, filters);
+      return this.generateMockInsights(meetings, [], data, filters);
     }
   }
 
@@ -269,21 +361,42 @@ Focus on: engagement patterns, customer health indicators, potential risks, oppo
     };
   }
 
-  private generateMockInsights(meetings: MeetingData[], data: any, filters: AnalyticsFilter) {
+  private generateMockInsights(meetings: MeetingData[], tasks: TaskData[], data: any, filters: AnalyticsFilter) {
+    const taskInsights = [];
+    const taskRecommendations = [];
+
+    if (data.totalTasks > 0) {
+      taskInsights.push(
+        `Task completion rate: ${data.taskCompletionRate}% completion rate indicates ${data.taskCompletionRate > 80 ? 'excellent' : data.taskCompletionRate > 60 ? 'good' : 'needs improvement'} task management`,
+        `Task priority distribution: ${data.tasksByPriority.find((p: { priority: string; count: number }) => p.priority === 'high')?.count || 0} high-priority tasks require immediate attention`
+      );
+
+      if (data.overdueTasks > 0) {
+        taskInsights.push(`${data.overdueTasks} overdue tasks need immediate attention`);
+        taskRecommendations.push('Address overdue tasks immediately to maintain customer satisfaction');
+      }
+
+      taskRecommendations.push(
+        data.taskCompletionRate < 70 ? 'Focus on improving task completion rates to enhance customer satisfaction' : 'Maintain current task completion standards'
+      );
+    }
+
     return {
-      summary: `Analysis of ${data.totalMeetings} meetings across ${data.uniqueCustomers} customers in the past ${filters.timeRange}. Average meeting frequency is ${data.averageMeetingsPerWeek} per week, indicating ${data.averageMeetingsPerWeek > 2 ? 'strong' : 'moderate'} customer engagement levels.`,
+      summary: `Analysis of ${data.totalMeetings} meetings and ${data.totalTasks} tasks across ${data.uniqueCustomers} customers in the past ${filters.timeRange}. Average meeting frequency is ${data.averageMeetingsPerWeek} per week with ${data.taskCompletionRate}% task completion rate, indicating ${data.averageMeetingsPerWeek > 2 && data.taskCompletionRate > 70 ? 'excellent' : 'good'} customer relationship management.`,
       insights: [
         `Meeting frequency: ${data.averageMeetingsPerWeek} meetings per week suggests ${data.averageMeetingsPerWeek > 2 ? 'excellent' : 'good'} customer engagement`,
         `Top performing customer: ${data.topCustomers[0]?.name || 'No data'} with ${data.topCustomers[0]?.meetingCount || 0} meetings shows strong relationship`,
         `Customer diversity: ${data.uniqueCustomers} unique customers engaged, indicating ${data.uniqueCustomers > 5 ? 'broad' : 'focused'} relationship management`,
-        `Meeting distribution: Regular meeting patterns suggest structured customer relationship approach`
+        `Meeting distribution: Regular meeting patterns suggest structured customer relationship approach`,
+        ...taskInsights
       ],
       recommendations: [
         `${data.averageMeetingsPerWeek < 1 ? 'Increase meeting frequency to strengthen customer relationships' : 'Maintain current meeting cadence for optimal engagement'}`,
         `Focus on customers with fewer meetings to ensure balanced attention across portfolio`,
         `Document key outcomes and action items from meetings to track progress`,
         `Consider scheduled follow-ups for customers showing reduced meeting frequency`,
-        `Leverage successful patterns from top customers to improve other relationships`
+        `Leverage successful patterns from top customers to improve other relationships`,
+        ...taskRecommendations
       ]
     };
   }
