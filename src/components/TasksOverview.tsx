@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { mockApi } from '@/lib/mockApi';
@@ -13,7 +13,8 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon,
   ClockIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline';
 
 interface TasksOverviewProps {
@@ -34,6 +35,7 @@ export default function TasksOverview({ allTasks, customers, isLoading }: TasksO
   const queryClient = useQueryClient();
   const [searchTasks, setSearchTasks] = useState('');
   const [completingTaskIds, setCompletingTaskIds] = useState<Set<string>>(new Set());
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   // Task completion mutation
   const updateTaskMutation = useMutation({
@@ -72,6 +74,30 @@ export default function TasksOverview({ allTasks, customers, isLoading }: TasksO
     });
   };
 
+  // Handle priority update
+  const handlePriorityChange = (taskId: string, newPriority: 'low' | 'medium' | 'high') => {
+    updateTaskMutation.mutate({ 
+      id: taskId, 
+      updates: { priority: newPriority } 
+    });
+    setOpenDropdownId(null); // Close dropdown after selection
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setOpenDropdownId(null);
+    };
+
+    if (openDropdownId) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [openDropdownId]);
+
   // Priority order for sorting (higher number = higher priority)
   const getPriorityOrder = (priority: string) => {
     switch (priority) {
@@ -87,19 +113,19 @@ export default function TasksOverview({ allTasks, customers, isLoading }: TasksO
     .map(customer => {
       const customerTasks = allTasks.filter(task => task.customer_id === customer.id);
       
-      // Sort active tasks by priority (high to low), then by due date, then by creation date
+      // Sort active tasks by: 1) overdue first, 2) then by priority (high to low), 3) then by due date
       const activeTasks = customerTasks
         .filter(task => task.status !== 'completed')
         .sort((a, b) => {
-          // First sort by priority
-          const priorityDiff = getPriorityOrder(b.priority) - getPriorityOrder(a.priority);
-          if (priorityDiff !== 0) return priorityDiff;
-          
-          // Then by overdue status (overdue tasks first)
+          // First check if tasks are overdue (overdue tasks always come first)
           const aOverdue = a.due_date && new Date(a.due_date) < new Date();
           const bOverdue = b.due_date && new Date(b.due_date) < new Date();
           if (aOverdue && !bOverdue) return -1;
           if (!aOverdue && bOverdue) return 1;
+          
+          // Then sort by priority (high to low)
+          const priorityDiff = getPriorityOrder(b.priority) - getPriorityOrder(a.priority);
+          if (priorityDiff !== 0) return priorityDiff;
           
           // Then by due date (earliest first)
           if (a.due_date && b.due_date) {
@@ -232,7 +258,7 @@ export default function TasksOverview({ allTasks, customers, isLoading }: TasksO
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-visible">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
@@ -281,11 +307,11 @@ export default function TasksOverview({ allTasks, customers, isLoading }: TasksO
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-6 overflow-visible">
           {customersWithTasks.map(({ customer, activeTasks, overdueTasks }) => (
             <div 
               key={customer.id}
-              className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl border border-gray-200/50 dark:border-gray-700/50 transition-all duration-300 hover:-translate-y-1"
+              className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl border border-gray-200/50 dark:border-gray-700/50 transition-all duration-300 hover:-translate-y-1 overflow-visible min-h-[200px]"
             >
               {/* Customer Header */}
               <div 
@@ -329,7 +355,7 @@ export default function TasksOverview({ allTasks, customers, isLoading }: TasksO
               </div>
 
               {/* Tasks List */}
-              <div className="p-6 space-y-3">
+              <div className="p-6 space-y-3 overflow-visible min-h-[200px]">
                 {activeTasks.slice(0, 5).map((task) => (
                   <div 
                     key={task.id}
@@ -362,19 +388,42 @@ export default function TasksOverview({ allTasks, customers, isLoading }: TasksO
                           task.priority === 'medium' ? 'text-yellow-900 dark:text-yellow-100' :
                           'text-gray-900 dark:text-white'
                         }`}>{task.title}</span>
-                        <div 
-                          className={`${
-                            task.priority === 'high' ? 'w-3 h-3' : 'w-2 h-2'
-                          } rounded-full ${getPriorityColor(task.priority)} flex-shrink-0 ${
-                            task.priority === 'high' ? 'ring-2 ring-red-200 dark:ring-red-800' : ''
-                          }`}
-                          title={`${task.priority} priority`}
-                        ></div>
-                        {task.priority === 'high' && (
-                          <span className="text-xs font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full">
-                            HIGH
-                          </span>
-                        )}
+                        
+                        {/* Inline Priority Dropdown */}
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenDropdownId(openDropdownId === task.id ? null : task.id);
+                            }}
+                            className="flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-1 py-0.5 transition-colors"
+                          >
+                            <div 
+                              className={`w-2 h-2 rounded-full ${getPriorityColor(task.priority)} flex-shrink-0`}
+                            />
+                            <ChevronDownIcon className="w-3 h-3 text-gray-400" />
+                          </button>
+
+                          {openDropdownId === task.id && (
+                            <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 z-[100] min-w-[100px]">
+                              {(['low', 'medium', 'high'] as const).map((priority) => (
+                                <button
+                                  key={priority}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePriorityChange(task.id, priority);
+                                  }}
+                                  className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                                    priority === task.priority ? 'bg-gray-50 dark:bg-gray-700' : ''
+                                  }`}
+                                >
+                                  <div className={`w-2 h-2 rounded-full ${getPriorityColor(priority)}`} />
+                                  <span className="text-sm capitalize">{priority}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
                       {task.description && (

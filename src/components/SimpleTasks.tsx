@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusIcon, CheckIcon, PencilIcon, TrashIcon, CalendarIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect } from 'react';
+import { PlusIcon, CheckIcon, PencilIcon, TrashIcon, CalendarIcon, ClockIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { Task } from '../types';
 
 interface SimpleTasksProps {
@@ -10,6 +10,7 @@ interface SimpleTasksProps {
   onTaskComplete: (taskId: string) => void;
   onTaskEdit: (task: Task) => void;
   onTaskDelete: (taskId: string) => void;
+  onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
 }
 
 export default function SimpleTasks({ 
@@ -17,9 +18,30 @@ export default function SimpleTasks({
   onTaskCreate, 
   onTaskComplete, 
   onTaskEdit, 
-  onTaskDelete 
+  onTaskDelete,
+  onTaskUpdate
 }: SimpleTasksProps) {
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+  const handlePriorityChange = (taskId: string, newPriority: 'low' | 'medium' | 'high') => {
+    if (onTaskUpdate) {
+      onTaskUpdate(taskId, { priority: newPriority });
+    }
+    setOpenDropdownId(null);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (openDropdownId) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openDropdownId]);
   const [showNewTask, setShowNewTask] = useState(false);
   const [newTaskDueDate, setNewTaskDueDate] = useState('');
 
@@ -69,6 +91,23 @@ export default function SimpleTasks({
     return new Date(dateString) < new Date() && new Date(dateString).toDateString() !== new Date().toDateString();
   };
 
+  // Sort active tasks by priority: expired/overdue first, then high, medium, low
+  const sortedActiveTasks = [...activeTasks].sort((a, b) => {
+    const aIsOverdue = isOverdue(a.due_date);
+    const bIsOverdue = isOverdue(b.due_date);
+    
+    // Overdue tasks always come first
+    if (aIsOverdue && !bIsOverdue) return -1;
+    if (!aIsOverdue && bIsOverdue) return 1;
+    
+    // If both are overdue or both are not overdue, sort by priority
+    const priorityOrder = { high: 1, medium: 2, low: 3 };
+    const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 4;
+    const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 4;
+    
+    return aPriority - bPriority;
+  });
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
@@ -96,18 +135,18 @@ export default function SimpleTasks({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-600">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-600 overflow-visible min-h-[300px]">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-600">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Tasks</h3>
           <div className="text-sm text-gray-500">
-            {activeTasks.length} active, {completedTasks.length} completed
+            {sortedActiveTasks.length} active, {completedTasks.length} completed
           </div>
         </div>
       </div>
 
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 overflow-visible min-h-[250px]">
         {/* Add Task Button/Input */}
         {!showNewTask ? (
           <button
@@ -168,7 +207,7 @@ export default function SimpleTasks({
         )}
 
         {/* Active Tasks */}
-        {activeTasks.map((task) => (
+        {sortedActiveTasks.map((task) => (
           <div key={task.id} className="group flex items-start gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg">
             <button
               onClick={() => onTaskComplete(task.id)}
@@ -179,11 +218,45 @@ export default function SimpleTasks({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-gray-900 dark:text-white">{task.title}</span>
-                {/* Priority Indicator */}
-                <div 
-                  className={`w-2 h-2 rounded-full ${getPriorityColor(task.priority)} flex-shrink-0`}
-                  title={getPriorityLabel(task.priority)}
-                ></div>
+                {/* Priority Dropdown - moved here next to title */}
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenDropdownId(openDropdownId === task.id ? null : task.id);
+                    }}
+                    className="flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-1 py-0.5 transition-colors"
+                  >
+                    <div 
+                      className={`w-2 h-2 rounded-full ${getPriorityColor(task.priority)} flex-shrink-0`}
+                    />
+                    <ChevronDownIcon className="w-3 h-3 text-gray-400" />
+                  </button>
+                  {openDropdownId === task.id && (
+                    <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-600 py-1 z-[100] min-w-[80px]">
+                      {(['low', 'medium', 'high'] as const).map((priority) => (
+                        <button
+                          key={priority}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePriorityChange(task.id, priority);
+                          }}
+                          className={`block w-full text-left px-3 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                            task.priority === priority 
+                              ? priority === 'high' 
+                                ? 'text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-900/20' 
+                                : priority === 'medium' 
+                                  ? 'text-yellow-700 bg-yellow-50 dark:text-yellow-300 dark:bg-yellow-900/20' 
+                                  : 'text-green-700 bg-green-50 dark:text-green-300 dark:bg-green-900/20'
+                              : 'text-gray-700 dark:text-gray-300'
+                          }`}
+                        >
+                          {priority}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               
               {task.description && (
@@ -202,19 +275,6 @@ export default function SimpleTasks({
                     {isOverdue(task.due_date) && <span className="ml-1">⚠️</span>}
                   </div>
                 )}
-                
-                {/* Priority Badge */}
-                <div className={`text-xs px-2 py-0.5 rounded-full ${
-                  task.priority === 'high' 
-                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                    : task.priority === 'medium'
-                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
-                    : task.priority === 'low'
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                }`}>
-                  {task.priority}
-                </div>
               </div>
             </div>
 

@@ -199,6 +199,10 @@ export default function CustomerDetailPage() {
     }
   };
 
+  const handleTaskUpdate = (taskId: string, updates: Partial<Omit<Task, 'id' | 'created_at'>>) => {
+    updateTaskMutation.mutate({ id: taskId, updates });
+  };
+
   const handleTaskStatusChange = (taskId: string, status: Task['status']) => {
     updateTaskMutation.mutate({ 
       id: taskId, 
@@ -518,14 +522,21 @@ export default function CustomerDetailPage() {
               )}
             </div>
           )}
+        </div>
 
-          {/* Customer Notes */}
-          {customerData.notes && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Notes</h3>
-              <p className="text-gray-600">{customerData.notes}</p>
-            </div>
-          )}
+        {/* Tasks Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-visible border border-gray-200 dark:border-gray-600 min-h-[400px]">
+          {/* Tasks List */}
+          <div className="p-6 overflow-visible">
+            <SimpleTasks
+              tasks={tasksData || []}
+              onTaskCreate={handleSimpleTaskCreate}
+              onTaskEdit={handleTaskEdit}
+              onTaskDelete={handleTaskDelete}
+              onTaskComplete={handleSimpleTaskComplete}
+              onTaskUpdate={handleTaskUpdate}
+            />
+          </div>
         </div>
 
         {/* Meetings Section */}
@@ -577,43 +588,6 @@ export default function CustomerDetailPage() {
                 ))}
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Tasks Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-600">
-          <div className="bg-gradient-to-r from-purple-500 to-pink-600 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="p-2 bg-white/20 rounded-lg mr-3">
-                  <ClockIcon className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white">Tasks</h2>
-                  <p className="text-purple-100 text-sm">
-                    {tasksData.filter(t => t.status !== 'completed').length} active, {tasksData.filter(t => t.status === 'completed').length} completed
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowTaskModal(true)}
-                className="bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-xl hover:bg-white/30 transition-all flex items-center space-x-2 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
-              >
-                <PlusIcon className="h-5 w-5" />
-                <span>Add Task</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Tasks List */}
-          <div className="p-6">
-            <SimpleTasks
-              tasks={tasksData || []}
-              onTaskCreate={handleSimpleTaskCreate}
-              onTaskEdit={handleTaskEdit}
-              onTaskDelete={handleTaskDelete}
-              onTaskComplete={handleSimpleTaskComplete}
-            />
           </div>
         </div>
       </main>

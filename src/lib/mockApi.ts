@@ -502,7 +502,7 @@ export const mockApi = {
             id: nextTaskId.toString(),
             title: trimmedTask,
             description: `Auto-generated from meeting next steps`,
-            priority: 'medium',
+            priority: 'low',
             status: 'pending',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
