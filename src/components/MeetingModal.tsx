@@ -8,6 +8,7 @@ import { mockApi } from '@/lib/mockApi';
 import { detectLanguage, getTextDirection, languageNames } from '@/lib/i18n';
 import { AISummary } from './AISummary';
 import type { Meeting } from '@/types';
+import type { AIAnalysisResult } from '@/lib/penteraAI-server';
 import {
   XMarkIcon,
   CloudArrowUpIcon,
@@ -258,7 +259,10 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    await saveMemeting();
+  };
+
+  const saveMemeting = async () => {
     const meetingDateTime = new Date(`${formData.date}T${formData.time}`);
     
     // Filter out empty action items (participants are already clean)
@@ -280,6 +284,32 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
         ...aiGeneratedSummary,
         generated_at: new Date().toISOString()
       } : undefined
+    };
+
+    if (meeting) {
+      updateMutation.mutate(meetingData);
+    } else {
+      createMutation.mutate(meetingData);
+    }
+  };
+
+  const saveMeetingWithAI = async (aiSummary: AIAnalysisResult) => {
+    const meetingDateTime = new Date(`${formData.date}T${formData.time}`);
+    
+    // Filter out empty action items (participants are already clean)
+    const cleanActionItems = formData.action_items.filter((item: string) => item.trim() !== '');
+
+    const meetingData = {
+      customer_id: customerId,
+      title: formData.title,
+      meeting_date: meetingDateTime.toISOString(),
+      duration: formData.duration,
+      participants: formData.participants, // Already clean, no need to filter
+      notes: formData.notes, // Notes already include AI summary
+      detected_language: detectedLanguage,
+      action_items: cleanActionItems,
+      next_steps: formData.next_steps,
+      screenshots: formData.screenshots
     };
 
     if (meeting) {
@@ -621,20 +651,47 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
                 notes={formData.notes}
                 screenshots={formData.screenshots}
                 onSummaryGenerated={setAiGeneratedSummary}
+                onSave={saveMeetingWithAI}
+                onNotesUpdate={(updatedNotes) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    notes: updatedNotes
+                  }));
+                  // Update the textarea value as well
+                  if (notesRef.current) {
+                    notesRef.current.value = updatedNotes;
+                  }
+                }}
               />
             )}
             
             {aiGeneratedSummary && !showAISummary && (
               <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                <div className="flex items-center text-sm text-green-800">
-                  <SparklesIcon className="h-4 w-4 mr-1" />
-                  AI summary generated and ready for use
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center text-sm text-green-800">
+                    <SparklesIcon className="h-4 w-4 mr-1" />
+                    AI summary generated and ready for use
+                    <button
+                      type="button"
+                      onClick={() => setShowAISummary(true)}
+                      className="ml-2 text-green-600 hover:text-green-700 underline"
+                    >
+                      View
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setShowAISummary(true)}
-                    className="ml-2 text-green-600 hover:text-green-700 underline"
+                    onClick={() => {
+                      // Use the latest AI summary from state
+                      if (aiGeneratedSummary) {
+                        saveMeetingWithAI(aiGeneratedSummary);
+                      } else {
+                        saveMemeting();
+                      }
+                    }}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
                   >
-                    View
+                    Save Meeting with AI Summary
                   </button>
                 </div>
               </div>

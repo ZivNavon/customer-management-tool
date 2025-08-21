@@ -15,6 +15,8 @@ export interface Meeting {
   detected_language?: string;
   action_items?: string[];
   next_steps?: string;
+  created_at?: string;
+  updated_at?: string;
   // AI Summary fields
   ai_summary?: {
     summary: string;

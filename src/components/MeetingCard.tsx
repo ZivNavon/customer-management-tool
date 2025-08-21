@@ -5,7 +5,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { meetingApi } from '@/lib/api';
 import { mockApi } from '@/lib/mockApi';
 import { detectLanguage, getTextDirection, languageNames } from '@/lib/i18n';
-import { AISummary } from './AISummary';
 import type { Meeting } from '@/types';
 import {
   CalendarIcon,
@@ -16,8 +15,7 @@ import {
   PencilIcon,
   TrashIcon,
   ChevronDownIcon,
-  ChevronUpIcon,
-  SparklesIcon
+  ChevronUpIcon
 } from '@heroicons/react/24/outline';
 
 interface MeetingCardProps {
@@ -29,7 +27,6 @@ export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showAISummary, setShowAISummary] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: async (meetingId: string) => {
@@ -46,6 +43,28 @@ export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
       setShowDeleteConfirm(false);
     },
   });
+
+  // Helper function to safely create object URL
+  const getSafeImageSrc = (screenshot: string | File): string | null => {
+    try {
+      if (typeof screenshot === 'string') {
+        // Check if it's a valid URL or base64 string
+        if (screenshot.startsWith('http') || screenshot.startsWith('data:image/')) {
+          return screenshot;
+        }
+        // If it's not a valid image string, return null
+        return null;
+      } else if (screenshot instanceof File) {
+        return URL.createObjectURL(screenshot);
+      } else {
+        console.warn('Invalid screenshot format:', typeof screenshot);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error creating object URL:', error);
+      return null;
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -99,12 +118,6 @@ export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
                   {meeting.screenshots.length} screenshot{meeting.screenshots.length !== 1 ? 's' : ''}
                 </span>
               )}
-              {meeting.ai_summary && (
-                <span className="flex items-center text-purple-600">
-                  <SparklesIcon className="h-4 w-4 mr-1" />
-                  AI Summary
-                </span>
-              )}
             </div>
 
             {/* Quick preview of notes */}
@@ -122,17 +135,6 @@ export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
 
           {/* Action buttons */}
           <div className="flex items-center space-x-2 ml-4">
-            <button
-              onClick={() => setShowAISummary(!showAISummary)}
-              className={`p-2 rounded-md ${
-                meeting.ai_summary 
-                  ? 'text-purple-600 bg-purple-50 hover:bg-purple-100' 
-                  : 'text-gray-500 hover:text-purple-600 hover:bg-purple-50'
-              }`}
-              title={meeting.ai_summary ? "View AI Summary" : "Generate AI Summary"}
-            >
-              <SparklesIcon className="h-4 w-4" />
-            </button>
             <button
               onClick={() => onEdit(meeting)}
               className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md"
@@ -249,128 +251,38 @@ export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
                 Screenshots ({meeting.screenshots.length})
               </h4>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {meeting.screenshots.map((screenshot: string | File, index: number) => (
-                  <div key={index} className="relative">
-                    <img
-                      src={typeof screenshot === 'string' ? screenshot : URL.createObjectURL(screenshot)}
-                      alt={`Screenshot ${index + 1}`}
-                      className="w-full h-20 object-cover rounded-md border cursor-pointer hover:opacity-75"
-                      onClick={() => {
-                        // Open in new tab for full view
-                        const img = new Image();
-                        img.src = typeof screenshot === 'string' ? screenshot : URL.createObjectURL(screenshot);
-                        const newWindow = window.open();
-                        newWindow?.document.write(img.outerHTML);
-                      }}
-                    />
-                  </div>
-                ))}
+                {meeting.screenshots.map((screenshot: string | File, index: number) => {
+                  const imageSrc = getSafeImageSrc(screenshot);
+                  return (
+                    <div key={index} className="relative">
+                      {imageSrc ? (
+                        <img
+                          src={imageSrc}
+                          alt={`Screenshot ${index + 1}`}
+                          className="w-full h-20 object-cover rounded-md border cursor-pointer hover:opacity-75"
+                          onClick={() => {
+                            try {
+                              const img = new Image();
+                              img.src = imageSrc;
+                              const newWindow = window.open();
+                              if (newWindow) {
+                                newWindow.document.write(`<img src="${imageSrc}" style="max-width: 100%; height: auto;" />`);
+                              }
+                            } catch (error) {
+                              console.error('Error opening screenshot:', error);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-20 bg-gray-200 dark:bg-gray-600 rounded-md border flex items-center justify-center text-xs text-gray-500">
+                          Image Error
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          )}
-        </div>
-      )}
-
-      {/* AI Summary Section */}
-      {showAISummary && (
-        <div className="border-t border-gray-200 p-4">
-          {meeting.ai_summary ? (
-            /* Display Saved AI Summary */
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <SparklesIcon className="h-5 w-5 text-purple-600 mr-2" />
-                  AI Meeting Summary
-                </h4>
-                <span className="text-xs text-gray-500">
-                  Generated {new Date(meeting.ai_summary.generated_at).toLocaleDateString()}
-                </span>
-              </div>
-
-              {/* Summary */}
-              <div>
-                <h5 className="font-medium text-gray-800 mb-2">📋 Summary</h5>
-                <p className="text-gray-700 text-sm">{meeting.ai_summary.summary}</p>
-              </div>
-
-              {/* Key Findings */}
-              {meeting.ai_summary.keyFindings && meeting.ai_summary.keyFindings.length > 0 && (
-                <div>
-                  <h5 className="font-medium text-gray-800 mb-2">🔍 Key Findings</h5>
-                  <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-                    {meeting.ai_summary.keyFindings.map((finding, index) => (
-                      <li key={index}>{finding}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Action Items */}
-              {meeting.ai_summary.actionItems && meeting.ai_summary.actionItems.length > 0 && (
-                <div>
-                  <h5 className="font-medium text-gray-800 mb-2">✅ Action Items</h5>
-                  <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-                    {meeting.ai_summary.actionItems.map((item, index) => (
-                      <li key={index}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Technical Recommendations */}
-              {meeting.ai_summary.technicalRecommendations && meeting.ai_summary.technicalRecommendations.length > 0 && (
-                <div>
-                  <h5 className="font-medium text-gray-800 mb-2">🔧 Technical Recommendations</h5>
-                  <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-                    {meeting.ai_summary.technicalRecommendations.map((rec, index) => (
-                      <li key={index}>{rec}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Next Steps */}
-              {meeting.ai_summary.nextSteps && meeting.ai_summary.nextSteps.length > 0 && (
-                <div>
-                  <h5 className="font-medium text-gray-800 mb-2">🎯 Next Steps</h5>
-                  <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-                    {meeting.ai_summary.nextSteps.map((step, index) => (
-                      <li key={index}>{step}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Email Draft */}
-              {meeting.ai_summary.emailDraft && (
-                <div>
-                  <h5 className="font-medium text-gray-800 mb-2">📧 AI Generated Email</h5>
-                  <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
-                    <pre 
-                      className="text-sm text-gray-700 whitespace-pre-wrap font-sans"
-                      style={{ direction: 'rtl', textAlign: 'right' }}
-                    >
-                      {meeting.ai_summary.emailDraft}
-                    </pre>
-                  </div>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(meeting.ai_summary?.emailDraft || '')}
-                    className="mt-2 inline-flex items-center px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700"
-                  >
-                    📋 Copy Email
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Generate New AI Summary */
-            <AISummary
-              meetingId={meeting.id}
-              customerId={meeting.customer_id}
-              customerName={meeting.customer?.name || 'Customer'}
-              notes={meeting.notes || ''}
-              screenshots={meeting.screenshots || []}
-            />
           )}
         </div>
       )}
