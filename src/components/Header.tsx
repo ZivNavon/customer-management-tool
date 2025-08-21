@@ -8,7 +8,8 @@ import {
   UsersIcon,
   SunIcon,
   MoonIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  CogIcon
 } from '@heroicons/react/24/outline';
 
 export function Header() {
@@ -40,6 +41,12 @@ export function Header() {
       href: '/analytics',
       icon: ChartBarIcon,
       current: pathname === '/analytics'
+    },
+    {
+      name: 'Settings',
+      href: '/settings',
+      icon: CogIcon,
+      current: pathname === '/settings'
     }
   ];
 

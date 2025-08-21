@@ -2,6 +2,9 @@
 
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { penteraAI, type AIAnalysisResult } from '@/lib/penteraAI-server';
+import { settingsManager } from '@/lib/settingsManager';
+import Link from 'next/link';
 import {
   SparklesIcon,
   DocumentTextIcon,
@@ -9,7 +12,11 @@ import {
   ClockIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  EnvelopeIcon,
+  ListBulletIcon,
+  LightBulbIcon,
+  CogIcon
 } from '@heroicons/react/24/outline';
 
 interface AISummaryProps {
@@ -18,13 +25,7 @@ interface AISummaryProps {
   customerName: string;
   notes: string;
   screenshots: (File | string)[];
-  onSummaryGenerated?: (summary: string) => void;
-}
-
-interface AIContext {
-  previousEmails: string[];
-  customerHistory: string[];
-  meetingPatterns: string[];
+  onSummaryGenerated?: (summary: AIAnalysisResult) => void;
 }
 
 export function AISummary({ 
@@ -36,141 +37,48 @@ export function AISummary({
   onSummaryGenerated 
 }: AISummaryProps) {
   const _queryClient = useQueryClient();
-  const [generatedSummary, setGeneratedSummary] = useState<string>('');
+  const [analysisResult, setAnalysisResult] = useState<AIAnalysisResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showContext, setShowContext] = useState(false);
-
-  // Mock AI context data (in real app, this would come from your email/CRM system)
-  const getMockAIContext = (): AIContext => ({
-    previousEmails: [
-      `Email to ${customerName}: "Following up on our Q3 planning discussion..."`,
-      `Email from ${customerName}: "Looking forward to implementing the new features..."`,
-      `Email to ${customerName}: "Regarding the technical integration requirements..."`
-    ],
-    customerHistory: [
-      `Previous meeting: Discussed roadmap priorities and budget allocation`,
-      `Previous meeting: Technical deep-dive on API integration`,
-      `Previous meeting: Contract renewal and expansion planning`
-    ],
-    meetingPatterns: [
-      `Typical meeting outcomes: Technical requirements, timeline discussions, next steps`,
-      `Customer preferences: Detailed documentation, clear action items`,
-      `Communication style: Professional, technical, solution-focused`
-    ]
-  });
+  const [error, setError] = useState<string>('');
+  const [isConfigured, setIsConfigured] = useState(settingsManager.isConfigured());
 
   const generateAISummary = async () => {
+    // Refresh configuration status
+    setIsConfigured(settingsManager.isConfigured());
+    
+    if (!settingsManager.isConfigured()) {
+      setError('Please configure your OpenAI API key in Settings first.');
+      return;
+    }
+
     setIsGenerating(true);
+    setError('');
     
     try {
-      // Simulate AI processing with realistic delay
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Convert screenshots from mixed types to File objects
+      const fileScreenshots = screenshots.filter((s): s is File => s instanceof File);
       
-      const context = getMockAIContext();
+      const result = await penteraAI.generateMeetingSummary({
+        meetingNotes: notes,
+        screenshots: fileScreenshots,
+        customerName,
+        meetingType: 'consultation' // Can be made dynamic based on meeting type
+      });
       
-      // Mock AI summary generation based on notes, screenshots, and context
-      const aiSummary = generateMockSummary(notes, screenshots.length, context, customerName);
-      
-      setGeneratedSummary(aiSummary);
-      onSummaryGenerated?.(aiSummary);
-      
-      // In real implementation, this would call the backend AI service
-      // const response = await meetingApi.generateSummary(meetingId, 'en');
-      // setGeneratedSummary(response.data.summary);
+      setAnalysisResult(result);
+      onSummaryGenerated?.(result);
       
     } catch (error) {
       console.error('Failed to generate AI summary:', error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Failed to generate AI summary. Please try again.');
+      }
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  const generateMockSummary = (notes: string, screenshotCount: number, context: AIContext, customer: string): string => {
-    const hasNotes = notes && notes.trim().length > 10;
-    const hasScreenshots = screenshotCount > 0;
-    
-    let summary = `## AI-Generated Meeting Summary\n\n`;
-    
-    // Context-aware summary based on previous emails and history
-    summary += `### Meeting Overview\n`;
-    summary += `Based on previous communications with ${customer} and meeting patterns, this session focused on:\n\n`;
-    
-    if (hasNotes) {
-      // Analyze notes content
-      const lowerNotes = notes.toLowerCase();
-      if (lowerNotes.includes('technical') || lowerNotes.includes('integration')) {
-        summary += `- **Technical Discussion**: Deep-dive into technical requirements and implementation details\n`;
-      }
-      if (lowerNotes.includes('roadmap') || lowerNotes.includes('planning') || lowerNotes.includes('future')) {
-        summary += `- **Strategic Planning**: Roadmap alignment and future feature planning\n`;
-      }
-      if (lowerNotes.includes('issue') || lowerNotes.includes('problem') || lowerNotes.includes('bug')) {
-        summary += `- **Issue Resolution**: Addressing current challenges and providing solutions\n`;
-      }
-      if (lowerNotes.includes('demo') || lowerNotes.includes('show') || lowerNotes.includes('present')) {
-        summary += `- **Product Demonstration**: Showcasing new features and capabilities\n`;
-      }
-    }
-    
-    if (hasScreenshots) {
-      summary += `- **Visual Documentation**: ${screenshotCount} screenshot${screenshotCount > 1 ? 's' : ''} captured for reference\n`;
-    }
-    
-    summary += `\n### Key Insights (AI-Enhanced)\n`;
-    summary += `*Based on previous email exchanges and customer interaction patterns:*\n\n`;
-    
-    // Context from previous emails
-    summary += `**Communication Context:**\n`;
-    summary += `- Previous discussions indicate ${customer} values detailed technical documentation\n`;
-    summary += `- Customer communication style suggests preference for structured action items\n`;
-    summary += `- Historical pattern shows focus on implementation timelines and deliverables\n\n`;
-    
-    // Meeting content analysis
-    if (hasNotes) {
-      summary += `**Meeting Content Analysis:**\n`;
-      const noteLength = notes.length;
-      if (noteLength > 500) {
-        summary += `- Comprehensive discussion (${Math.floor(noteLength/100)*5}+ minutes estimated)\n`;
-      } else if (noteLength > 200) {
-        summary += `- Focused discussion covering key topics\n`;
-      } else {
-        summary += `- Brief but targeted conversation\n`;
-      }
-      
-      // Extract potential action items from notes
-      const sentences = notes.split(/[.!?]+/).filter(s => s.trim().length > 10);
-      const actionWords = ['will', 'should', 'need', 'must', 'plan', 'schedule', 'follow', 'send', 'provide'];
-      const potentialActions = sentences.filter(sentence => 
-        actionWords.some(word => sentence.toLowerCase().includes(word))
-      );
-      
-      if (potentialActions.length > 0) {
-        summary += `- Identified ${potentialActions.length} potential action item${potentialActions.length > 1 ? 's' : ''} for follow-up\n`;
-      }
-    }
-    
-    if (hasScreenshots) {
-      summary += `- Visual evidence captured for documentation and reference\n`;
-      summary += `- Screenshots can be used for technical documentation and stakeholder updates\n`;
-    }
-    
-    summary += `\n### Recommended Next Steps (AI Suggestions)\n`;
-    summary += `*Based on customer communication patterns and meeting outcomes:*\n\n`;
-    summary += `1. **Follow-up Email**: Send detailed summary within 24 hours (aligns with ${customer} preferences)\n`;
-    summary += `2. **Documentation**: Create technical documentation if applicable\n`;
-    summary += `3. **Action Items**: Schedule specific follow-up tasks based on discussion points\n`;
-    summary += `4. **Stakeholder Update**: Share key outcomes with relevant team members\n\n`;
-    
-    summary += `### Email Context Integration\n`;
-    summary += `*AI has considered the following recent communications:*\n\n`;
-    context.previousEmails.slice(0, 2).forEach((email, _index) => {
-      summary += `- ${email}\n`;
-    });
-    
-    summary += `\n---\n`;
-    summary += `*This summary was generated using AI analysis of meeting notes, visual content, and historical communication patterns. Review and customize as needed before sharing.*`;
-    
-    return summary;
   };
 
   return (
@@ -189,22 +97,56 @@ export function AISummary({
         </button>
       </div>
 
+      {/* Configuration Check */}
+      {!isConfigured && (
+        <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <div className="flex items-start gap-3">
+            <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-medium text-amber-800 dark:text-amber-200 mb-1">
+                AI Features Not Configured
+              </h4>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                To use AI-powered meeting summaries, you need to configure your OpenAI API key.
+              </p>
+              <Link
+                href="/settings"
+                className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-600 text-white text-sm font-medium rounded-md hover:bg-amber-700 transition-colors"
+              >
+                <CogIcon className="h-4 w-4" />
+                Go to Settings
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <div className="flex items-center">
+            <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mr-2" />
+            <span className="text-red-700 text-sm">{error}</span>
+          </div>
+        </div>
+      )}
+
       {/* AI Context Information */}
       {showContext && (
         <div className="mb-4 p-3 bg-white rounded-md border border-gray-200">
           <h4 className="font-medium text-gray-800 mb-2">AI Context Sources:</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
             <div>
-              <div className="font-medium text-blue-600 mb-1">📧 Email History</div>
-              <div className="text-gray-600">Previous email exchanges</div>
+              <div className="font-medium text-blue-600 mb-1">� Cybersecurity Focus</div>
+              <div className="text-gray-600">Pentera consultation context</div>
             </div>
             <div>
-              <div className="font-medium text-green-600 mb-1">📅 Meeting Patterns</div>
-              <div className="text-gray-600">Historical meeting outcomes</div>
+              <div className="font-medium text-green-600 mb-1">� Image Analysis</div>
+              <div className="text-gray-600">Screenshot content analysis</div>
             </div>
             <div>
-              <div className="font-medium text-purple-600 mb-1">🎯 Customer Profile</div>
-              <div className="text-gray-600">Communication preferences</div>
+              <div className="font-medium text-purple-600 mb-1">🎯 Industry Expertise</div>
+              <div className="text-gray-600">Penetration testing knowledge</div>
             </div>
           </div>
         </div>
@@ -240,7 +182,7 @@ export function AISummary({
       </div>
 
       {/* Generate Button */}
-      {!generatedSummary && (
+      {!analysisResult && isConfigured && (
         <div className="text-center mb-4">
           <button
             onClick={generateAISummary}
@@ -278,26 +220,96 @@ export function AISummary({
           <div className="space-y-2 text-sm text-gray-600">
             <div className="flex items-center justify-center">
               <ClockIcon className="h-4 w-4 mr-2" />
-              Analyzing meeting notes and visual content
+              Analyzing meeting notes and screenshots
             </div>
-            <div>Reviewing previous email communications with {customerName}</div>
-            <div>Applying meeting pattern recognition</div>
-            <div>Generating contextual summary and recommendations</div>
+            <div>Applying cybersecurity domain knowledge</div>
+            <div>Anonymizing sensitive information</div>
+            <div>Generating structured summary and email draft</div>
           </div>
         </div>
       )}
 
-      {/* Generated Summary */}
-      {generatedSummary && (
-        <div className="bg-white rounded-lg p-4 border border-green-200">
+      {/* Generated Analysis Results */}
+      {analysisResult && (
+        <div className="space-y-4">
           <div className="flex items-center mb-3">
             <CheckCircleIcon className="h-5 w-5 text-green-600 mr-2" />
-            <span className="font-medium text-green-800">AI Summary Generated</span>
+            <span className="font-medium text-green-800">AI Analysis Complete</span>
           </div>
-          
-          <div className="prose prose-sm max-w-none">
-            <div className="whitespace-pre-wrap text-gray-800 bg-gray-50 p-4 rounded-md border">
-              {generatedSummary}
+
+          {/* Summary */}
+          <div className="bg-white rounded-lg p-4 border border-blue-200">
+            <div className="flex items-center mb-2">
+              <DocumentTextIcon className="h-4 w-4 text-blue-600 mr-2" />
+              <h4 className="font-medium text-blue-800">Meeting Summary</h4>
+            </div>
+            <div className="text-gray-700 text-sm bg-blue-50 p-3 rounded border">
+              {analysisResult.summary}
+            </div>
+          </div>
+
+          {/* Key Findings */}
+          {analysisResult.keyFindings.length > 0 && (
+            <div className="bg-white rounded-lg p-4 border border-orange-200">
+              <div className="flex items-center mb-2">
+                <LightBulbIcon className="h-4 w-4 text-orange-600 mr-2" />
+                <h4 className="font-medium text-orange-800">Key Findings</h4>
+              </div>
+              <ul className="text-sm text-gray-700 space-y-1 bg-orange-50 p-3 rounded border">
+                {analysisResult.keyFindings.map((finding, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="text-orange-500 mr-2">•</span>
+                    {finding}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Action Items */}
+          {analysisResult.actionItems.length > 0 && (
+            <div className="bg-white rounded-lg p-4 border border-green-200">
+              <div className="flex items-center mb-2">
+                <ListBulletIcon className="h-4 w-4 text-green-600 mr-2" />
+                <h4 className="font-medium text-green-800">Action Items</h4>
+              </div>
+              <ul className="text-sm text-gray-700 space-y-1 bg-green-50 p-3 rounded border">
+                {analysisResult.actionItems.map((item, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="text-green-500 mr-2">•</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Technical Recommendations */}
+          {analysisResult.technicalRecommendations.length > 0 && (
+            <div className="bg-white rounded-lg p-4 border border-purple-200">
+              <div className="flex items-center mb-2">
+                <SparklesIcon className="h-4 w-4 text-purple-600 mr-2" />
+                <h4 className="font-medium text-purple-800">Technical Recommendations</h4>
+              </div>
+              <ul className="text-sm text-gray-700 space-y-1 bg-purple-50 p-3 rounded border">
+                {analysisResult.technicalRecommendations.map((rec, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="text-purple-500 mr-2">•</span>
+                    {rec}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Email Draft */}
+          <div className="bg-white rounded-lg p-4 border border-indigo-200">
+            <div className="flex items-center mb-2">
+              <EnvelopeIcon className="h-4 w-4 text-indigo-600 mr-2" />
+              <h4 className="font-medium text-indigo-800">Hebrew Email Draft</h4>
+            </div>
+            <div className="text-sm text-gray-700 bg-indigo-50 p-3 rounded border whitespace-pre-wrap font-mono text-right" dir="rtl">
+              {analysisResult.emailDraft}
             </div>
           </div>
           
@@ -310,7 +322,7 @@ export function AISummary({
             <div className="flex space-x-2">
               <button
                 onClick={() => {
-                  setGeneratedSummary('');
+                  setAnalysisResult(null);
                   generateAISummary();
                 }}
                 className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200"
@@ -319,11 +331,27 @@ export function AISummary({
               </button>
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(generatedSummary);
+                  const fullContent = `
+MEETING SUMMARY:
+${analysisResult.summary}
+
+KEY FINDINGS:
+${analysisResult.keyFindings.map(f => `• ${f}`).join('\n')}
+
+ACTION ITEMS:
+${analysisResult.actionItems.map(a => `• ${a}`).join('\n')}
+
+TECHNICAL RECOMMENDATIONS:
+${analysisResult.technicalRecommendations.map(r => `• ${r}`).join('\n')}
+
+EMAIL DRAFT:
+${analysisResult.emailDraft}
+                  `;
+                  navigator.clipboard.writeText(fullContent.trim());
                 }}
                 className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
               >
-                Copy to Clipboard
+                Copy All
               </button>
             </div>
           </div>

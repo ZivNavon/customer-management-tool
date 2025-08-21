@@ -70,7 +70,7 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
 
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [showAISummary, setShowAISummary] = useState(false);
-  const [aiGeneratedSummary, setAiGeneratedSummary] = useState<string>('');
+  const [aiGeneratedSummary, setAiGeneratedSummary] = useState<any>(null); // Store full AI analysis result
   const [detectedLanguage, setDetectedLanguage] = useState<string>('en');
 
   // Fetch customer data to get contacts
@@ -104,6 +104,11 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
         next_steps: meeting.next_steps || '',
         screenshots: []
       });
+      
+      // Load existing AI summary if available
+      if (meeting.ai_summary) {
+        setAiGeneratedSummary(meeting.ai_summary);
+      }
       
       // Set detected language from existing meeting or detect from notes
       if (meeting.detected_language) {
@@ -248,7 +253,7 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
     });
     setPreviewImages([]);
     setShowAISummary(false);
-    setAiGeneratedSummary('');
+    setAiGeneratedSummary(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -269,7 +274,12 @@ export function MeetingModal({ isOpen, onClose, customerId, customerName, meetin
       detected_language: detectedLanguage,
       action_items: cleanActionItems,
       next_steps: formData.next_steps,
-      screenshots: formData.screenshots
+      screenshots: formData.screenshots,
+      // Include AI summary if generated
+      ai_summary: aiGeneratedSummary ? {
+        ...aiGeneratedSummary,
+        generated_at: new Date().toISOString()
+      } : undefined
     };
 
     if (meeting) {
