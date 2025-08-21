@@ -151,7 +151,7 @@ IMPORTANT:
 - Prioritize actionable recommendations`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini", // Use gpt-4o-mini for better rate limit handling
       messages: [
         {
           role: "system",
@@ -180,6 +180,9 @@ IMPORTANT:
         nextSteps: ['Schedule follow-up meeting']
       };
     }
+
+    // Add a small delay to help with rate limiting
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Generate Hebrew email draft using enhanced context
     const emailPrompt = `${CYBERSECURITY_CONTEXT}
@@ -213,7 +216,7 @@ REQUIREMENTS:
 Generate only the email content starting with "צוות [CUSTOMER_NAME] היקרים,".`;
 
     const emailResponse = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini", // Use gpt-4o-mini for better rate limit handling
       messages: [
         {
           role: "system",
