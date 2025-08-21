@@ -9,7 +9,8 @@ import {
   CheckCircleIcon, 
   ExclamationTriangleIcon,
   SparklesIcon,
-  CogIcon
+  CogIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 
 interface APIKeySettings {
@@ -89,7 +90,7 @@ export default function SettingsPage() {
       if (result.success) {
         setTestResult({ 
           success: true, 
-          message: `Connection successful! Model: ${result.model || 'Unknown'}` 
+          message: `✅ Connection successful! Model: ${result.model || 'Unknown'}${result.availableModels ? `\n🎯 Available: ${Object.entries(result.availableModels).filter(([,available]) => available).map(([model]) => model).join(', ')}` : ''}` 
         });
         setSettings(prev => ({ 
           ...prev, 
@@ -97,15 +98,38 @@ export default function SettingsPage() {
           isConfigured: true 
         }));
       } else {
+        let enhancedMessage = result.error || 'Connection failed';
+        
+        // Add helpful hints based on error type
+        if (result.error?.includes('Rate limit')) {
+          enhancedMessage += '\n\n💡 Tips:\n• Wait 1-2 minutes before retrying\n• Check your OpenAI usage dashboard\n• Verify your billing status';
+        } else if (result.error?.includes('Invalid API key')) {
+          enhancedMessage += '\n\n💡 Tips:\n• Ensure the key starts with "sk-"\n• Check for extra spaces or characters\n• Verify the key in OpenAI dashboard';
+        } else if (result.error?.includes('permissions')) {
+          enhancedMessage += '\n\n💡 Tips:\n• Ensure API key has GPT-4o access\n• Check your OpenAI plan limits\n• Verify model permissions';
+        }
+        
+        if (result.details) {
+          enhancedMessage += `\n\n🔍 Details: ${result.details}`;
+        }
+        
         setTestResult({ 
           success: false, 
-          message: result.error || 'Connection failed' 
+          message: enhancedMessage
         });
       }
-    } catch (error) {
+    } catch (error: any) {
+      let errorMessage = 'Network error. Please check your connection.';
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        errorMessage = 'Connection failed. Please check your internet connection.';
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+      
       setTestResult({ 
         success: false, 
-        message: 'Network error. Please check your connection.' 
+        message: errorMessage
       });
     } finally {
       setIsTestingConnection(false);
@@ -204,17 +228,37 @@ export default function SettingsPage() {
                   ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
                   : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
               }`}>
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-3">
                   {testResult.success ? (
-                    <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                    <CheckCircleIcon className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5" />
                   ) : (
-                    <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />
+                    <ExclamationTriangleIcon className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
                   )}
-                  <span className={`text-sm font-medium ${
-                    testResult.success ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'
-                  }`}>
-                    {testResult.message}
-                  </span>
+                  <div className="flex-1">
+                    <div className={`text-sm font-medium whitespace-pre-line ${
+                      testResult.success ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'
+                    }`}>
+                      {testResult.message}
+                    </div>
+                    
+                    {/* Additional help for rate limiting */}
+                    {!testResult.success && testResult.message.includes('Rate limit') && (
+                      <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md border border-yellow-200 dark:border-yellow-700">
+                        <div className="flex items-center gap-2 mb-2">
+                          <ClockIcon className="h-4 w-4 text-yellow-600" />
+                          <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                            Rate Limit Help
+                          </span>
+                        </div>
+                        <div className="text-xs text-yellow-700 dark:text-yellow-300 space-y-1">
+                          <p>• OpenAI has usage limits based on your plan</p>
+                          <p>• Wait 1-2 minutes before trying again</p>
+                          <p>• Check your usage at <a href="https://platform.openai.com/usage" target="_blank" rel="noopener noreferrer" className="underline hover:text-yellow-500">OpenAI Dashboard</a></p>
+                          <p>• Consider upgrading your plan if you hit limits frequently</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
