@@ -72,21 +72,28 @@ export class PenteraAIService {
       settingsManager.updateUsageStats(1, 0); // You can track actual costs if needed
 
       return result.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating AI summary:', error);
       
-      // Provide user-friendly error messages
+      // Provide user-friendly error messages based on error type
       if (error instanceof Error) {
-        if (error.message.includes('API key')) {
-          throw new Error('Invalid API key. Please check your settings.');
-        } else if (error.message.includes('rate limit')) {
-          throw new Error('Rate limit exceeded. Please try again later.');
-        } else if (error.message.includes('quota')) {
-          throw new Error('API quota exceeded. Please check your OpenAI billing.');
+        if (error.message.includes('API key') || error.message.includes('Authentication')) {
+          throw new Error('🔑 Invalid API key. Please check your settings and ensure the key is correct.');
+        } else if (error.message.includes('rate limit') || error.message.includes('Rate limit')) {
+          throw new Error('⏱️ Rate limit exceeded. Please wait 1-2 minutes and try again.');
+        } else if (error.message.includes('quota') || error.message.includes('billing')) {
+          throw new Error('💳 API quota exceeded. Please check your OpenAI billing and usage limits.');
+        } else if (error.message.includes('permissions')) {
+          throw new Error('🚫 API key lacks required permissions. Ensure it has access to GPT-4o models.');
+        } else if (error.message.includes('Network') || error.message.includes('fetch')) {
+          throw new Error('🌐 Network connection error. Please check your internet connection.');
+        } else if (error.message.includes('configured')) {
+          throw new Error('⚙️ OpenAI API key not configured. Please go to Settings to add your API key.');
         }
       }
       
-      throw new Error('Failed to generate AI analysis. Please try again.');
+      // Generic fallback with helpful suggestion
+      throw new Error('❌ Failed to generate AI analysis. Please check your API key in Settings and try again.');
     }
   }
 }
