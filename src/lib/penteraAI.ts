@@ -35,54 +35,85 @@ IMPORTANT CONTEXT:
 - Pentera is a continuous automated penetration testing platform
 - The consultant helps customers understand security findings, build remediation plans, and optimize their security posture
 - Meetings typically involve reviewing attack simulation results, discussing vulnerabilities, and planning security improvements
-- The consultant speaks Hebrew but uses English technical terms
-- Always anonymize any IP addresses, domain names, or sensitive identifiers in outputs
+- The consultant speaks Hebrew but uses English technical terms integrated naturally
+- Always anonymize any IP addresses, domain names, company names, or sensitive identifiers in outputs
 
-COMMON TERMS:
-- Attack Surface Management (ASM)
-- Continuous Automated Red Team (CART)
-- Lateral Movement
-- Privilege Escalation
-- Network Segmentation
-- Vulnerability Assessment
-- Penetration Testing
-- Security Controls Validation
-- Remediation Priorities
-- Risk Assessment
-- CVE (Common Vulnerabilities and Exposures)
-- MITRE ATT&CK Framework
-- Zero Trust Architecture
-- SOC (Security Operations Center)
-- SIEM (Security Information and Event Management)
+COMMON TEST TYPES:
+- BB (Black Box) - External penetration testing
+- GB (Grey Box) - Internal testing with limited access
+- RR (Red Team) - Advanced persistent threat simulation
+- ADPA - Active Directory Password Assessment
+- Ransomware campaigns (Cl0p, Lockbit, etc.)
+
+COMMON TECHNICAL FINDINGS:
+- SNMP v1/2 vulnerabilities (recommend SNMPv3)
+- LLMNR/NetBios/mDns exploitation
+- Reverse shell establishment
+- Crypto mining malware deployment
+- EDR/AV bypasses
+- Privilege escalation
+- Lateral movement
+- Persistent access mechanisms
+- Password policy violations
+- Network segmentation issues
+
+COMMON RECOMMENDATIONS:
+- Network protocol hardening
+- EDR configuration optimization
+- User awareness training
+- Regular penetration testing schedules
+- MDR team response procedures
+- SIEM integration
+- Wiki documentation updates
+- Scheduled recurring assessments
+
+INFRASTRUCTURE TERMS:
+- VLAN segmentation
+- Domain controllers
+- Attack surface management
+- Network interface configurations
+- RAN (Remote Attack Node)
+- AB (Agent-Based) deployment
+- Ubuntu migration procedures
+- SSH service accounts
 `;
 
 const EMAIL_TEMPLATE_CONTEXT = `
-EXPECTED EMAIL FORMAT (Hebrew + English technical terms):
-Subject: סיכום פגישה - [Customer Name] - [Date]
+EXPECTED EMAIL FORMAT (Based on authentic Pentera consultation emails):
 
-היי [Contact Name],
+צוות [CUSTOMER_NAME] היקרים,
+להלן עיקרי הדברים שעברנו עליהם בפגישתינו האחרונה
 
-תודה על הפגישה היום. להלן סיכום הנקודות העיקריות:
+מעבר על תוצאות:
+	1. [Test Type] - [Campaign/Test Name]
+		a. [Finding 1 with technical details]
+		b. [Finding 2 with remediation recommendations]
+		c. [Additional findings if applicable]
 
-**ממצאים עיקריים:**
-[Key findings from penetration testing/validation]
+הגדרת ריצות מתוזמנות:
+	1. [Scheduled test configuration]
+	2. [Additional scheduling details]
 
-**משימות שהוגדרו:**
-[Defined tasks and action items]
+בקשות טכניות:
+	1. [Technical requests or configurations needed]
 
-**המלצות טכניות:**
-[Technical recommendations]
+צעדים להמשך:
+	1. [Next steps and action items]
+	2. [Follow-up activities]
 
-**צעדים הבאים:**
-[Next steps]
-
-**קישורים וחומרים מועילים:**
-[Helpful links and guides]
-
-אשמח לענות על כל שאלה נוספת.
+במידה ויש לכם שאלות/בקשות נוספות, תרגישו חופשי לפנות אליי.
 
 בברכה,
-[Name]
+
+STYLE NOTES:
+- Use formal Hebrew with technical English terms integrated naturally
+- Structure with numbered lists and sub-items (a., b., c.)
+- Include specific technical recommendations with acronyms (EDR, SNMP, VLAN, etc.)
+- Always end with the standard closing phrase
+- Use "Pentera" consistently for the platform name
+- Include specific test types: BB (Black Box), GB (Grey Box), RR (Red Team), ADPA
+- Reference protocols: LLMNR/NetBios/mDns, SNMP, HTTP, etc.
+- Mention remediation actions and wiki guides when relevant
 `;
 
 export class PenteraAIService {
@@ -186,16 +217,35 @@ ${screenshotAnalyses.map((analysis, i) => `Screenshot ${i + 1}: ${analysis}`).jo
 CUSTOMER CONTEXT:
 ${input.customerContext ? JSON.stringify(input.customerContext, null, 2) : 'No additional context provided'}
 
-Please provide a structured analysis with the following sections:
-1. **MEETING_SUMMARY** - Brief overview of the meeting
-2. **KEY_FINDINGS** - Main security findings and observations
-3. **ACTION_ITEMS** - Specific tasks and deliverables
-4. **TECHNICAL_RECOMMENDATIONS** - Technical guidance and recommendations
-5. **NEXT_STEPS** - Immediate next steps and follow-up actions
+Please analyze this Pentera cybersecurity consultation meeting and structure your response as follows:
+
+1. **MEETING_SUMMARY** - Brief overview focusing on test results and security posture
+2. **KEY_FINDINGS** - Extract specific technical findings like:
+   - Protocol vulnerabilities (SNMP, LLMNR/NetBios/mDns)
+   - Malware deployment success (crypto mining, ransomware)
+   - EDR/AV bypass incidents
+   - Privilege escalation paths
+   - Network segmentation issues
+   - Password policy violations
+3. **ACTION_ITEMS** - Specific technical tasks like:
+   - Schedule recurring tests (BB, GB, RR cycles)
+   - Configure test environments
+   - Deploy infrastructure (RAN, AB agents)
+   - Update security policies
+4. **TECHNICAL_RECOMMENDATIONS** - Specific remediation advice:
+   - Protocol hardening (SNMPv3, disable LLMNR)
+   - EDR configuration improvements
+   - Network segmentation enhancements
+   - User awareness training needs
+5. **NEXT_STEPS** - Immediate follow-up actions and scheduling
 
 Format your response as a JSON object with these exact keys: summary, keyFindings, actionItems, technicalRecommendations, nextSteps
 
-IMPORTANT: Anonymize all sensitive information (IPs, domains, usernames) in your response.`;
+IMPORTANT: 
+- Focus on cybersecurity findings and remediation
+- Use technical terminology consistent with Pentera platform
+- Anonymize all sensitive information (IPs, domains, usernames)
+- Prioritize actionable recommendations`;
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o", // Use GPT-4 for complex analysis
@@ -264,15 +314,20 @@ MEETING DETAILS:
 - Next Steps: ${JSON.stringify(analysis.nextSteps)}
 
 REQUIREMENTS:
-1. Write primarily in Hebrew
-2. Use English for technical terms (leave untranslated)
-3. Follow the provided email template structure
-4. Be professional and concise
-5. Include specific action items and next steps
-6. Anonymize any sensitive information
-7. Include placeholder for helpful links/guides section
+1. Write primarily in Hebrew with professional tone
+2. Use English for ALL technical terms (SNMP, VLAN, EDR, etc.) - do NOT translate them
+3. Follow the numbered structure exactly as shown in the template
+4. Use tabs for sub-items (a., b., c.)
+5. Include specific technical details like protocol names, vulnerability types
+6. Mention "מומלץ" (recommended) for remediation actions
+7. Reference wiki guides and documentation when relevant
+8. End with the exact phrase: "במידה ויש לכם שאלות/בקשות נוספות, תרגישו חופשי לפנות אליי."
+9. Include "בברכה," at the end
+10. Anonymize any sensitive data with [PLACEHOLDER] format
+11. Use "Pentera" consistently (not פנטרה)
+12. Structure findings by test types (BB, GB, RR, ADPA)
 
-Generate only the email content (no subject line needed).`;
+Generate only the email content starting with "צוות [CUSTOMER_NAME] היקרים,".`;
 
     try {
       const response = await openai.chat.completions.create({
@@ -283,7 +338,7 @@ Generate only the email content (no subject line needed).`;
             content: emailPrompt
           }
         ],
-        temperature: 0.6,
+        temperature: 0.5, // Lower temperature for more consistent formatting
         max_tokens: 1500
       });
 
