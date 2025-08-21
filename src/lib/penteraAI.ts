@@ -39,11 +39,13 @@ IMPORTANT CONTEXT:
 - Always anonymize any IP addresses, domain names, company names, or sensitive identifiers in outputs
 
 COMMON TEST TYPES:
-- BB (Black Box) - External penetration testing
-- GB (Grey Box) - Internal testing with limited access
-- RR (Red Team) - Advanced persistent threat simulation
-- ADPA - Active Directory Password Assessment
-- Ransomware campaigns (Cl0p, Lockbit, etc.)
+- BB (Black Box) - External penetration testing without internal knowledge
+- GB (Gray Box) - Internal testing with limited access and credentials
+- RR (Ransomware) - Ransomware simulation campaigns (Cl0p, Lockbit, etc.)
+- ADPA (Active Directory Password Assessment) - Password strength and policy evaluation
+- AB (Attack Bridge) - Agent-based attack deployment method
+- RAN (Remote Attack Node) - Remote testing infrastructure deployment
+- DAN (Dynamic Attack Node) - Dynamic attack infrastructure
 
 COMMON TECHNICAL FINDINGS:
 - SNMP v1/2 vulnerabilities (recommend SNMPv3)
@@ -72,10 +74,12 @@ INFRASTRUCTURE TERMS:
 - Domain controllers
 - Attack surface management
 - Network interface configurations
-- RAN (Remote Attack Node)
-- AB (Agent-Based) deployment
+- RAN (Remote Attack Node) - Remote testing infrastructure
+- AB (Attack Bridge) - Agent-based deployment method
+- DAN (Dynamic Attack Node) - Dynamic attack infrastructure
 - Ubuntu migration procedures
 - SSH service accounts
+- Network topology analysis
 `;
 
 const EMAIL_TEMPLATE_CONTEXT = `
@@ -221,17 +225,20 @@ Please analyze this Pentera cybersecurity consultation meeting and structure you
 
 1. **MEETING_SUMMARY** - Brief overview focusing on test results and security posture
 2. **KEY_FINDINGS** - Extract specific technical findings like:
+   - Test type results (BB/GB/RR/ADPA outcomes)
    - Protocol vulnerabilities (SNMP, LLMNR/NetBios/mDns)
    - Malware deployment success (crypto mining, ransomware)
    - EDR/AV bypass incidents
    - Privilege escalation paths
    - Network segmentation issues
    - Password policy violations
+   - Active Directory security gaps
 3. **ACTION_ITEMS** - Specific technical tasks like:
-   - Schedule recurring tests (BB, GB, RR cycles)
-   - Configure test environments
-   - Deploy infrastructure (RAN, AB agents)
-   - Update security policies
+   - Schedule recurring tests (BB, GB, RR, ADPA cycles)
+   - Configure test environments (RAN, AB, DAN deployments)
+   - Deploy infrastructure components
+   - Update security policies and configurations
+   - Coordinate with MDR teams
 4. **TECHNICAL_RECOMMENDATIONS** - Specific remediation advice:
    - Protocol hardening (SNMPv3, disable LLMNR)
    - EDR configuration improvements
@@ -325,7 +332,15 @@ REQUIREMENTS:
 9. Include "בברכה," at the end
 10. Anonymize any sensitive data with [PLACEHOLDER] format
 11. Use "Pentera" consistently (not פנטרה)
-12. Structure findings by test types (BB, GB, RR, ADPA)
+12. Structure findings by test types (BB, GB, RR, ADPA, AB, RAN, DAN)
+13. Use correct abbreviations:
+    - BB = Black Box testing
+    - GB = Gray Box testing  
+    - RR = Ransomware testing
+    - ADPA = Active Directory Password Assessment
+    - AB = Attack Bridge
+    - RAN = Remote Attack Node
+    - DAN = Dynamic Attack Node
 
 Generate only the email content starting with "צוות [CUSTOMER_NAME] היקרים,".`;
 
