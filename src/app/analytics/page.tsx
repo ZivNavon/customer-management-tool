@@ -18,6 +18,7 @@ import { aiAnalyticsService, type AnalyticsFilter, type AnalyticsReport, type Me
 import { mockApi } from '@/lib/mockApi';
 import { addSampleMeetingData } from '@/lib/sampleMeetings';
 import { type Meeting, type Customer, type Task } from '@/types';
+import { SettingsManager } from '@/lib/settingsManager';
 import { Header } from '@/components/Header';
 
 interface CustomerWithMeetings {
@@ -107,8 +108,6 @@ export default function AnalyticsPage() {
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentReport, setCurrentReport] = useState<AnalyticsReport | null>(null);
-  const [apiKey, setApiKey] = useState('');
-  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const [isAddingSampleData, setIsAddingSampleData] = useState(false);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
 
@@ -217,20 +216,12 @@ export default function AnalyticsPage() {
     );
   };
 
-  const handleSetApiKey = () => {
-    if (apiKey.trim()) {
-      aiAnalyticsService.setApiKey(apiKey.trim());
-      setShowApiKeyInput(false);
-      localStorage.setItem('openai_api_key', apiKey.trim());
-    }
-  };
-
-  // Load API key from localStorage on mount
+  // Initialize API key from centralized settings on mount
   useEffect(() => {
-    const savedApiKey = localStorage.getItem('openai_api_key');
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-      aiAnalyticsService.setApiKey(savedApiKey);
+    const settingsManager = SettingsManager.getInstance();
+    const settings = settingsManager.getSettings();
+    if (settings.isConfigured && settings.openaiApiKey) {
+      aiAnalyticsService.setApiKey(settings.openaiApiKey);
     }
   }, []);
 
@@ -338,56 +329,6 @@ export default function AnalyticsPage() {
                     placeholder="To Date"
                   />
                 </div>
-              </div>
-
-              {/* API Key Configuration */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    OpenAI API Key
-                  </label>
-                  <button
-                    onClick={() => setShowApiKeyInput(!showApiKeyInput)}
-                    className="text-xs text-blue-600 hover:text-blue-700 flex items-center"
-                  >
-                    <KeyIcon className="h-3 w-3 mr-1" />
-                    {apiKey ? 'Update' : 'Configure'}
-                  </button>
-                </div>
-                
-                {showApiKeyInput ? (
-                  <div className="space-y-3">
-                    <input
-                      type="password"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="sk-..."
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    />
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={handleSetApiKey}
-                        className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setShowApiKeyInput(false)}
-                        className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-xs hover:bg-gray-400"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-sm bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-                    {apiKey ? (
-                      <span className="text-green-600 dark:text-green-400">✓ API Key configured</span>
-                    ) : (
-                      <span className="text-orange-600 dark:text-orange-400">⚠️ No API key - using mock data</span>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* Data Preview */}
@@ -581,7 +522,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Recommendations */}
-                <div>
+                <div className="mb-6">
                   <h3 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-3">
                     Recommendations
                   </h3>
@@ -594,6 +535,176 @@ export default function AnalyticsPage() {
                     ))}
                   </div>
                 </div>
+
+                {/* Enhanced AI Analytics */}
+                {currentReport.aiAnalytics && (
+                  <>
+                    {/* Language Distribution */}
+                    <div className="mb-6">
+                      <h3 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-3">
+                        🌍 Language Distribution
+                      </h3>
+                      <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {currentReport.aiAnalytics.languageDistribution.map((lang, index) => (
+                            <div key={index} className="text-center">
+                              <div className="text-lg font-semibold text-indigo-600 dark:text-indigo-400">
+                                {lang.percentage}%
+                              </div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                {lang.language} ({lang.count} meetings)
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Risk Assessment */}
+                    <div className="mb-6">
+                      <h3 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-3">
+                        ⚠️ Risk Assessment
+                      </h3>
+                      <div className="space-y-4">
+                        <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Overall Risk Score</span>
+                            <span className={`text-lg font-bold ${
+                              currentReport.aiAnalytics.riskAssessment.overallRiskScore > 70 ? 'text-red-600' :
+                              currentReport.aiAnalytics.riskAssessment.overallRiskScore > 50 ? 'text-yellow-600' : 'text-green-600'
+                            }`}>
+                              {currentReport.aiAnalytics.riskAssessment.overallRiskScore}/100
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full ${
+                                currentReport.aiAnalytics.riskAssessment.overallRiskScore > 70 ? 'bg-red-500' :
+                                currentReport.aiAnalytics.riskAssessment.overallRiskScore > 50 ? 'bg-yellow-500' : 'bg-green-500'
+                              }`}
+                              style={{ width: `${currentReport.aiAnalytics.riskAssessment.overallRiskScore}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        
+                        {currentReport.aiAnalytics.riskAssessment.highRiskCustomers.length > 0 && (
+                          <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
+                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">High Risk Customers</h4>
+                            <div className="space-y-2">
+                              {currentReport.aiAnalytics.riskAssessment.highRiskCustomers.map((customer, index) => (
+                                <div key={index} className="border-l-4 border-orange-500 pl-3">
+                                  <div className="font-medium text-gray-800 dark:text-gray-200">{customer.customerName}</div>
+                                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                                    {customer.riskFactors.join(', ')}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Participant Analysis */}
+                    <div className="mb-6">
+                      <h3 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-3">
+                        👥 Participant Analysis
+                      </h3>
+                      <div className="bg-cyan-50 dark:bg-cyan-900/20 rounded-lg p-4">
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Frequent Participants</h4>
+                            <div className="space-y-1">
+                              {currentReport.aiAnalytics.participantAnalysis.frequentParticipants.map((participant, index) => (
+                                <div key={index} className="text-sm text-gray-600 dark:text-gray-400">
+                                  <span className="font-medium">{participant.name}</span> - {participant.meetingCount} meetings
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Engagement Metrics</h4>
+                            <div className="space-y-1">
+                              {currentReport.aiAnalytics.participantAnalysis.engagementMetrics.map((metric, index) => (
+                                <div key={index} className="flex items-center justify-between text-sm">
+                                  <span className="text-gray-600 dark:text-gray-400">{metric.metric}</span>
+                                  <div className="flex items-center">
+                                    <span className="text-gray-800 dark:text-gray-200 mr-1">{metric.value}</span>
+                                    <span className={`text-xs ${
+                                      metric.trend === 'up' ? 'text-green-500' :
+                                      metric.trend === 'down' ? 'text-red-500' : 'text-gray-500'
+                                    }`}>
+                                      {metric.trend === 'up' ? '↗️' : metric.trend === 'down' ? '↘️' : '➡️'}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Key Topics */}
+                    <div className="mb-6">
+                      <h3 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-3">
+                        🏷️ Key Discussion Topics
+                      </h3>
+                      <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-4">
+                        <div className="grid md:grid-cols-2 gap-3">
+                          {currentReport.aiAnalytics.keyTopics.map((topic, index) => (
+                            <div key={index} className="flex items-center justify-between">
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{topic.topic}</span>
+                              <div className="flex items-center">
+                                <span className="text-xs text-gray-500 mr-2">{topic.frequency}x</span>
+                                <span className={`text-xs px-2 py-1 rounded ${
+                                  topic.sentiment === 'positive' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' :
+                                  topic.sentiment === 'negative' ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100' :
+                                  'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100'
+                                }`}>
+                                  {topic.sentiment}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actionable Insights */}
+                    <div className="mb-6">
+                      <h3 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-3">
+                        🎯 Actionable Insights
+                      </h3>
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+                          <h4 className="text-sm font-medium text-red-700 dark:text-red-300 mb-2">🚨 Urgent Actions</h4>
+                          <div className="space-y-1">
+                            {currentReport.aiAnalytics.actionableInsights.urgentActions.map((action, index) => (
+                              <div key={index} className="text-xs text-red-600 dark:text-red-400">• {action}</div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                          <h4 className="text-sm font-medium text-green-700 dark:text-green-300 mb-2">📈 Opportunities</h4>
+                          <div className="space-y-1">
+                            {currentReport.aiAnalytics.actionableInsights.opportunities.map((opportunity, index) => (
+                              <div key={index} className="text-xs text-green-600 dark:text-green-400">• {opportunity}</div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+                          <h4 className="text-sm font-medium text-yellow-700 dark:text-yellow-300 mb-2">⚠️ Warning Signals</h4>
+                          <div className="space-y-1">
+                            {currentReport.aiAnalytics.actionableInsights.warningSignals.map((warning, index) => (
+                              <div key={index} className="text-xs text-yellow-600 dark:text-yellow-400">• {warning}</div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm p-12 text-center">
