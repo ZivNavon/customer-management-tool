@@ -1,5 +1,5 @@
 import { Customer } from './api';
-import { Task, Meeting } from '../types';
+import { Task } from '../types';
 
 // Define proper types for API responses
 interface Contact {
@@ -19,6 +19,21 @@ interface CustomerCreateData {
   renewal_date?: string;
   last_meeting_date?: string;
   contacts?: Contact[];
+}
+
+interface Meeting {
+  id: string;
+  customer_id: string;
+  title: string;
+  meeting_date: string;
+  duration: number;
+  participants: string[];
+  notes: string;
+  action_items: string[];
+  next_steps: string;
+  screenshots: (File | string)[];
+  created_at: string;
+  updated_at: string;
 }
 
 // Storage keys for localStorage

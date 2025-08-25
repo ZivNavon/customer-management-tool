@@ -251,22 +251,12 @@ class AIAnalyticsService {
   ): Promise<{ summary: string; insights: string[]; recommendations: string[] }> {
     const providerSettings = this.getProviderSettings();
     
-    console.log('🤖 AI Analytics - Provider settings:', {
-      provider: providerSettings.provider,
-      hasApiKey: !!providerSettings.apiKey,
-      apiKeyLength: providerSettings.apiKey?.length || 0,
-      meetingsCount: meetings.length,
-      tasksCount: tasks.length
-    });
-    
     if (!providerSettings.apiKey) {
-      console.log('📝 No AI API key found, using structured insights');
       return this.generateStructuredInsights(meetings, tasks, data, filters);
     }
 
     try {
       const prompt = this.buildAnalysisPrompt(meetings, tasks, data, filters);
-      console.log('🔄 Calling AI API with prompt length:', prompt.length);
       
       let response;
       if (providerSettings.provider === 'gemini') {
@@ -275,15 +265,9 @@ class AIAnalyticsService {
         response = await this.callOpenAIAPI(prompt, providerSettings.apiKey);
       }
       
-      console.log('✅ AI API response received:', {
-        summaryLength: response.summary?.length || 0,
-        insightsCount: response.insights?.length || 0,
-        recommendationsCount: response.recommendations?.length || 0
-      });
-      
       return response;
     } catch (error) {
-      console.error('❌ AI API call failed, falling back to structured insights:', error);
+      console.error('AI API call failed, falling back to structured insights:', error);
       return this.generateStructuredInsights(meetings, tasks, data, filters);
     }
   }
@@ -331,29 +315,6 @@ class AIAnalyticsService {
 
     const allInsights = [...customerInsights, ...generalInsights];
     const allRecommendations = [...customerRecommendations, ...generalRecommendations];
-
-    // Ensure we always have at least some insights
-    if (allInsights.length === 0) {
-      if (meetings.length > 0) {
-        allInsights.push(`נתונים כלליים: התקיימו ${meetings.length} פגישות עם ${data.uniqueCustomers} לקוחות.`);
-      }
-      if (tasks.length > 0) {
-        allInsights.push(`ניהול משימות: ${data.completedTasks} מתוך ${data.totalTasks} משימות הושלמו (${data.taskCompletionRate}%).`);
-      }
-      if (allInsights.length === 0) {
-        allInsights.push('אין נתונים מספיקים לייצור תובנות משמעותיות בתקופה זו.');
-      }
-    }
-
-    if (allRecommendations.length === 0) {
-      if (data.overdueTasks > 0) {
-        allRecommendations.push(`דחיפות: טיפול ב-${data.overdueTasks} משימות באיחור.`);
-      } else if (meetings.length > 0 && tasks.length === 0) {
-        allRecommendations.push('הגדר משימות מעקב לפגישות שהתקיימו.');
-      } else if (allRecommendations.length === 0) {
-        allRecommendations.push('המשך מעקב שוטף אחר פגישות ומשימות.');
-      }
-    }
 
     const summary = this.generateProfessionalSummary(meetings, tasks, data, filters);
 
@@ -499,10 +460,6 @@ class AIAnalyticsService {
       year: 'השנה'
     }[filters.timeRange] || 'התקופה';
 
-    if (meetings.length === 0 && tasks.length === 0) {
-      return `ב${timeRangeHebrew} לא נרשמו פגישות או משימות.`;
-    }
-
     const customerNames = Array.from(new Set(meetings.map(m => m.customer_name))).slice(0, 3);
     const customerText = customerNames.length > 0 
       ? customerNames.length === 1 
@@ -512,22 +469,17 @@ class AIAnalyticsService {
         : `עם ${customerNames.slice(0, -1).join(', ')} ו-${customerNames[customerNames.length - 1]}`
       : '';
 
-    let summary = '';
-
-    if (meetings.length > 0) {
-      summary += `ב${timeRangeHebrew} התקיימו ${data.totalMeetings} פגישות ${customerText}.`;
-    }
+    let summary = `ב${timeRangeHebrew} התקיימו ${data.totalMeetings} פגישות ${customerText}.`;
 
     if (data.totalTasks > 0) {
-      const taskSummary = meetings.length > 0 ? ' ' : `ב${timeRangeHebrew} `;
-      summary += `${taskSummary}נוצרו ${data.totalTasks} משימות, מתוכן הושלמו ${data.completedTasks} (${data.taskCompletionRate}%).`;
+      summary += ` נוצרו ${data.totalTasks} משימות, מתוכן הושלמו ${data.completedTasks} (${data.taskCompletionRate}%).`;
     }
 
     if (data.overdueTasks > 0) {
       summary += ` ${data.overdueTasks} משימות באיחור דורשות טיפול מיידי.`;
     }
 
-    return summary || `ב${timeRangeHebrew} נרשמה פעילות עסקית.`;
+    return summary;
   }
 
   private async callOpenAIAPI(prompt: string, apiKey: string): Promise<{ summary: string; insights: string[]; recommendations: string[] }> {
@@ -584,119 +536,43 @@ class AIAnalyticsService {
 
   private parseAIResponse(content: string): { summary: string; insights: string[]; recommendations: string[] } {
     try {
-      // Try to parse JSON first
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        if (parsed.summary || parsed.insights || parsed.recommendations) {
-          return {
-            summary: parsed.summary || 'AI analysis completed',
-            insights: Array.isArray(parsed.insights) ? parsed.insights : ['AI insights generated'],
-            recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : ['AI recommendations provided']
-          };
-        }
-      }
-
-      // Parse text format if JSON parsing fails
-      const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-      
-      let summary = '';
-      const insights: string[] = [];
-      const recommendations: string[] = [];
-      
-      let currentSection = '';
-      
-      for (const line of lines) {
-        if (line.toLowerCase().includes('summary') || line.includes('סיכום')) {
-          currentSection = 'summary';
-          const summaryText = line.split(':').slice(1).join(':').trim();
-          if (summaryText) summary = summaryText;
-          continue;
-        }
-        
-        if (line.toLowerCase().includes('insight') || line.includes('תובנה') || line.includes('תובנות')) {
-          currentSection = 'insights';
-          continue;
-        }
-        
-        if (line.toLowerCase().includes('recommendation') || line.includes('המלצה') || line.includes('המלצות')) {
-          currentSection = 'recommendations';
-          continue;
-        }
-        
-        // Process content based on current section
-        if (currentSection === 'summary' && !summary) {
-          summary = line;
-        } else if (currentSection === 'insights') {
-          if (line.startsWith('-') || line.startsWith('•') || line.startsWith('*')) {
-            insights.push(line.substring(1).trim());
-          } else if (line.length > 10) {
-            insights.push(line);
-          }
-        } else if (currentSection === 'recommendations') {
-          if (line.startsWith('-') || line.startsWith('•') || line.startsWith('*')) {
-            recommendations.push(line.substring(1).trim());
-          } else if (line.length > 10) {
-            recommendations.push(line);
-          }
-        }
-      }
-
-      if (summary || insights.length > 0 || recommendations.length > 0) {
         return {
-          summary: summary || 'ניתוח AI הושלם בהצלחה',
-          insights: insights.length > 0 ? insights : ['תובנות מותאמות אישית לכל לקוח יופיעו כאן'],
-          recommendations: recommendations.length > 0 ? recommendations : ['המלצות מבוססות נתונים יופיעו כאן']
+          summary: parsed.summary || 'AI analysis completed',
+          insights: Array.isArray(parsed.insights) ? parsed.insights : ['AI insights generated'],
+          recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : ['AI recommendations provided']
         };
       }
     } catch (error) {
       console.error('Failed to parse AI response:', error);
     }
 
-    // Fallback to Hebrew
     return {
-      summary: 'ניתוח AI הושלם בהצלחה',
-      insights: ['תובנות מותאמות אישית לכל לקוח יופיעו כאן לאחר קיבועי תגובת AI'],
-      recommendations: ['המלצות מבוססות נתונים יופיעו כאן לאחר קיבועי תגובת AI']
+      summary: 'AI analysis completed successfully',
+      insights: ['AI-powered insights will appear here once the response is parsed'],
+      recommendations: ['AI-powered recommendations will appear here once the response is parsed']
     };
   }
 
   private buildAnalysisPrompt(meetings: MeetingData[], tasks: TaskData[], data: any, filters: AnalyticsFilter): string {
-    const customerDetails = meetings.length > 0 
-      ? meetings.map(m => `- ${m.customer_name}: "${m.title}" ב-${new Date(m.date).toLocaleDateString('he-IL')}${m.summary ? ` - ${m.summary}` : ''}${m.notes ? ` | הערות: ${m.notes}` : ''}`).join('\n')
-      : 'אין פגישות בתקופה זו';
+    return `Analyze the following customer meeting and task data. Provide insights in Hebrew.
 
-    const taskDetails = tasks.length > 0
-      ? tasks.map(t => `- ${t.customer_name || 'לא צוין'}: "${t.title}" (${t.status === 'completed' ? 'הושלמה' : t.status === 'in_progress' ? 'בביצוע' : 'ממתינה'}, עדיפות ${t.priority === 'high' ? 'גבוהה' : t.priority === 'medium' ? 'בינונית' : 'נמוכה'})`).join('\n')
-      : 'אין משימות בתקופה זו';
+Meetings: ${meetings.length}
+Tasks: ${tasks.length}
+Time period: ${filters.timeRange}
 
-    return `אנא נתח את נתוני הפגישות והמשימות הבאים וספק תובנות בעברית.
+Meeting details:
+${meetings.map(m => `- ${m.customer_name}: ${m.title} on ${m.date}`).join('\n')}
 
-נתוני סיכום:
-- סה"כ פגישות: ${meetings.length}
-- סה"כ משימות: ${tasks.length}
-- תקופת זמן: ${filters.timeRange}
-- לקוחות פעילים: ${data.uniqueCustomers}
+Task details:
+${tasks.map(t => `- ${t.customer_name}: ${t.title} (${t.status}, ${t.priority})`).join('\n')}
 
-פרטי פגישות:
-${customerDetails}
-
-פרטי משימות:
-${taskDetails}
-
-אנא ספק ניתוח במבנה הבא:
-
-סיכום: [סקירה קצרה בעברית של הפעילות הכללית]
-
-תובנות:
-- [תובנה ספציפית בעברית]
-- [תובנה נוספת בעברית]
-
-המלצות:
-- [המלצה ספציפית בעברית]
-- [המלצה נוספת בעברית]
-
-התמקד בתובנות ממשיות ומותאמות לכל לקוח, וספק המלצות פרקטיות בלבד.`;
+Provide analysis in this format:
+Summary: [Brief overview in Hebrew]
+Insights: [List of specific insights]
+Recommendations: [List of actionable recommendations]`;
   }
 }
 
