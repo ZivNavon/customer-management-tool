@@ -1,6 +1,10 @@
 // Utility functions for managing API keys and settings
+export type AIProvider = 'openai' | 'gemini';
+
 export interface AISettings {
+  provider: AIProvider;
   openaiApiKey: string;
+  geminiApiKey: string;
   isConfigured: boolean;
   lastTested?: string;
   usageStats?: {
@@ -24,19 +28,28 @@ export class SettingsManager {
   // Get settings from localStorage
   public getSettings(): AISettings {
     if (typeof window === 'undefined') {
-      return { openaiApiKey: '', isConfigured: false };
+      return { provider: 'openai', openaiApiKey: '', geminiApiKey: '', isConfigured: false };
     }
 
     try {
       const saved = localStorage.getItem(SETTINGS_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Ensure backward compatibility by adding missing fields
+        return {
+          provider: parsed.provider || 'openai',
+          openaiApiKey: parsed.openaiApiKey || '',
+          geminiApiKey: parsed.geminiApiKey || '',
+          isConfigured: parsed.isConfigured || false,
+          lastTested: parsed.lastTested,
+          usageStats: parsed.usageStats
+        };
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
     }
 
-    return { openaiApiKey: '', isConfigured: false };
+    return { provider: 'openai', openaiApiKey: '', geminiApiKey: '', isConfigured: false };
   }
 
   // Save settings to localStorage
@@ -51,16 +64,29 @@ export class SettingsManager {
     }
   }
 
-  // Get just the API key
+  // Get just the API key for the selected provider
   public getApiKey(): string {
     const settings = this.getSettings();
-    return settings.openaiApiKey || '';
+    return settings.provider === 'openai' ? settings.openaiApiKey : settings.geminiApiKey;
+  }
+
+  // Get API key for specific provider
+  public getApiKeyForProvider(provider: AIProvider): string {
+    const settings = this.getSettings();
+    return provider === 'openai' ? settings.openaiApiKey : settings.geminiApiKey;
+  }
+
+  // Get current provider
+  public getProvider(): AIProvider {
+    const settings = this.getSettings();
+    return settings.provider;
   }
 
   // Check if AI features are configured
   public isConfigured(): boolean {
     const settings = this.getSettings();
-    return settings.isConfigured && !!settings.openaiApiKey;
+    const apiKey = settings.provider === 'openai' ? settings.openaiApiKey : settings.geminiApiKey;
+    return settings.isConfigured && !!apiKey;
   }
 
   // Clear all settings

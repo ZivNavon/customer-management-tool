@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Pentera/Cybersecurity specific terminology and context
 const CYBERSECURITY_CONTEXT = `
@@ -85,29 +86,33 @@ STYLE NOTES:
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { apiKey, meetingNotes, customerName, meetingType, screenshots } = body;
+    const { provider, apiKey, meetingNotes, customerName, meetingType, screenshots } = body;
 
     // Validate input
-    if (!apiKey || !meetingNotes || !customerName) {
+    if (!provider || !apiKey || !meetingNotes || !customerName) {
       return NextResponse.json(
-        { error: 'Missing required fields (apiKey, meetingNotes, customerName)' },
+        { error: 'Missing required fields (provider, apiKey, meetingNotes, customerName)' },
         { status: 400 }
       );
     }
 
-    // Validate API key format
-    if (!apiKey.startsWith('sk-')) {
+    // Validate API key format based on provider
+    if (provider === 'openai' && !apiKey.startsWith('sk-')) {
       return NextResponse.json(
-        { error: 'Invalid API key format' },
+        { error: 'Invalid OpenAI API key format' },
         { status: 400 }
       );
     }
 
-    const openai = new OpenAI({
-      apiKey: apiKey,
-    });
+    if (provider === 'gemini' && !apiKey.startsWith('AIza')) {
+      return NextResponse.json(
+        { error: 'Invalid Gemini API key format' },
+        { status: 400 }
+      );
+    }
 
-    // Generate AI analysis using enhanced Pentera context
+    try {
+      // Generate AI analysis using enhanced Pentera context
     const analysisPrompt = `${CYBERSECURITY_CONTEXT}
 
 MEETING CONTEXT:
@@ -150,22 +155,42 @@ IMPORTANT:
 - Anonymize all sensitive information (IPs, domains, usernames)
 - Prioritize actionable recommendations`;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Use gpt-4o-mini for better rate limit handling
-      messages: [
-        {
-          role: "system",
-          content: analysisPrompt
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 2000
-    });
+    let analysisResult;
 
-    const analysisResult = response.choices[0]?.message?.content;
+    if (provider === 'openai') {
+      const openai = new OpenAI({
+        apiKey: apiKey,
+      });
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini", // Use gpt-4o-mini for better rate limit handling
+        messages: [
+          {
+            role: "system",
+            content: analysisPrompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000
+      });
+
+      analysisResult = response.choices[0]?.message?.content;
+    } else if (provider === 'gemini') {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const result = await model.generateContent(analysisPrompt);
+      const response = await result.response;
+      analysisResult = response.text();
+    } else {
+      return NextResponse.json(
+        { error: 'Unsupported provider. Use "openai" or "gemini".' },
+        { status: 400 }
+      );
+    }
     
     if (!analysisResult) {
-      throw new Error('No analysis result from OpenAI');
+      throw new Error(`No analysis result from ${provider}`);
     }
 
     let parsedResult;
@@ -215,19 +240,34 @@ REQUIREMENTS:
 
 Generate only the email content starting with "צוות [CUSTOMER_NAME] היקרים,".`;
 
-    const emailResponse = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Use gpt-4o-mini for better rate limit handling
-      messages: [
-        {
-          role: "system",
-          content: emailPrompt
-        }
-      ],
-      temperature: 0.5, // Lower temperature for more consistent formatting
-      max_tokens: 1500
-    });
+    let emailDraft;
 
-    const emailDraft = emailResponse.choices[0]?.message?.content || 'Email generation failed';
+    if (provider === 'openai') {
+      const openai = new OpenAI({
+        apiKey: apiKey,
+      });
+
+      const emailResponse = await openai.chat.completions.create({
+        model: "gpt-4o-mini", // Use gpt-4o-mini for better rate limit handling
+        messages: [
+          {
+            role: "system",
+            content: emailPrompt
+          }
+        ],
+        temperature: 0.5, // Lower temperature for more consistent formatting
+        max_tokens: 1500
+      });
+
+      emailDraft = emailResponse.choices[0]?.message?.content || 'Email generation failed';
+    } else if (provider === 'gemini') {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const result = await model.generateContent(emailPrompt);
+      const response = await result.response;
+      emailDraft = response.text() || 'Email generation failed';
+    }
 
     return NextResponse.json({
       success: true,
@@ -236,7 +276,12 @@ Generate only the email content starting with "צוות [CUSTOMER_NAME] היקר
         emailDraft
       }
     });
-
+    
+    } catch (innerError: any) {
+      // Handle inner try-catch errors (AI generation failures)
+      throw innerError;
+    }
+    
   } catch (error: any) {
     console.error('AI analysis error:', error);
     

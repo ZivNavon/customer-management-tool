@@ -33,22 +33,29 @@ export class PenteraAIService {
   }
 
   public async generateMeetingSummary(input: AIAnalysisInput): Promise<AIAnalysisResult> {
-    // Check if API key is configured
+    // Check if any provider is configured
     if (!settingsManager.isConfigured()) {
-      throw new Error('OpenAI API key not configured. Please go to Settings to add your API key.');
+      throw new Error('⚙️ No AI provider configured. Please go to Settings to add your API key.');
     }
 
-    const apiKey = settingsManager.getApiKey();
+    const settings = settingsManager.getSettings();
+    const provider = settings.provider || 'openai';
+    const apiKey = settingsManager.getApiKeyForProvider(provider);
+
+    if (!apiKey) {
+      throw new Error(`🔑 ${provider === 'openai' ? 'OpenAI' : 'Gemini'} API key not configured. Please check your settings.`);
+    }
 
     try {
-      // Call server-side API with the user's API key
+      // Call server-side API with the user's API key and provider
       const response = await fetch('/api/ai-summary', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          apiKey, // Pass the API key from localStorage
+          provider,
+          apiKey,
           meetingNotes: input.meetingNotes,
           customerName: input.customerName,
           meetingType: input.meetingType,
@@ -78,17 +85,17 @@ export class PenteraAIService {
       // Provide user-friendly error messages based on error type
       if (error instanceof Error) {
         if (error.message.includes('API key') || error.message.includes('Authentication')) {
-          throw new Error('🔑 Invalid API key. Please check your settings and ensure the key is correct.');
+          throw new Error(`🔑 Invalid API key. Please check your ${provider === 'openai' ? 'OpenAI' : 'Gemini'} settings and ensure the key is correct.`);
         } else if (error.message.includes('rate limit') || error.message.includes('Rate limit')) {
           throw new Error('⏱️ Rate limit exceeded. Please wait 1-2 minutes and try again.');
         } else if (error.message.includes('quota') || error.message.includes('billing')) {
-          throw new Error('💳 API quota exceeded. Please check your OpenAI billing and usage limits.');
+          throw new Error(`💳 API quota exceeded. Please check your ${provider === 'openai' ? 'OpenAI' : 'Google Cloud'} billing and usage limits.`);
         } else if (error.message.includes('permissions')) {
-          throw new Error('🚫 API key lacks required permissions. Ensure it has access to GPT-4o models.');
+          throw new Error(`🚫 API key lacks required permissions. Ensure it has access to ${provider === 'openai' ? 'GPT-4o models' : 'Gemini API'}.`);
         } else if (error.message.includes('Network') || error.message.includes('fetch')) {
           throw new Error('🌐 Network connection error. Please check your internet connection.');
         } else if (error.message.includes('configured')) {
-          throw new Error('⚙️ OpenAI API key not configured. Please go to Settings to add your API key.');
+          throw new Error('⚙️ AI provider not configured. Please go to Settings to add your API key.');
         }
       }
       

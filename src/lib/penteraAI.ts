@@ -301,6 +301,18 @@ IMPORTANT:
 
     } catch (error) {
       console.error('Error generating AI summary:', error);
+      
+      // Check for specific OpenAI errors
+      if (error instanceof Error) {
+        if (error.message.includes('429') || error.message.includes('rate limit')) {
+          throw new Error('⏱️ Rate limit exceeded. Please wait 1-2 minutes and try again. Consider upgrading your OpenAI plan for higher limits.');
+        } else if (error.message.includes('401')) {
+          throw new Error('🔑 Invalid API key. Please check your OpenAI API key in settings.');
+        } else if (error.message.includes('403')) {
+          throw new Error('🚫 API key lacks required permissions. Ensure it has access to GPT-4o models.');
+        }
+      }
+      
       throw new Error('Failed to generate AI analysis');
     }
   }
@@ -360,6 +372,16 @@ Generate only the email content starting with "צוות [CUSTOMER_NAME] היקר
       return response.choices[0]?.message?.content || 'Email draft generation failed';
     } catch (error) {
       console.error('Error generating email draft:', error);
+      
+      // Check for specific OpenAI errors
+      if (error instanceof Error) {
+        if (error.message.includes('429') || error.message.includes('rate limit')) {
+          return 'שגיאה: הגיעה למגבלת הבקשות. יש להמתין 1-2 דקות ולנסות שוב.';
+        } else if (error.message.includes('401')) {
+          return 'שגיאה: מפתח API לא תקין. יש לבדוק את ההגדרות.';
+        }
+      }
+      
       return 'שגיאה ביצירת טיוטת המייל - יש לבדוק ידנית';
     }
   }

@@ -41,6 +41,7 @@ export default function RootLayout({
     <html lang={i18n.language} dir={direction}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased transition-colors duration-200`}
+        suppressHydrationWarning={true}
       >
         <ThemeProvider>
           <QueryClientProvider client={queryClient}>

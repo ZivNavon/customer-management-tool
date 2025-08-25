@@ -94,7 +94,7 @@ export function AISummary({
     setIsConfigured(settingsManager.isConfigured());
     
     if (!settingsManager.isConfigured()) {
-      setError('Please configure your OpenAI API key in Settings first.');
+      setError('Please configure your AI provider API key in Settings first.');
       return;
     }
 
