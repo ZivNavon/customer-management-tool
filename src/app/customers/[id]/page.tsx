@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useParams, useRouter } from 'next/navigation';
@@ -37,6 +37,7 @@ export default function CustomerDetailPage() {
   const [showContactsModal, setShowContactsModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [logoLoadError, setLogoLoadError] = useState(false);
 
   // Fetch customer data
   const { data: customer, isLoading: customerLoading } = useQuery({
@@ -123,8 +124,10 @@ export default function CustomerDetailPage() {
       }
     },
     onSuccess: () => {
-      // Only invalidate customers list to update dashboard stats
-      _queryClient.invalidateQueries({ queryKey: ['customers'] });
+      // Invalidate all customer-related queries to update dashboard and other components
+      _queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === 'customers' 
+      });
     },
   });
 
@@ -337,20 +340,12 @@ export default function CustomerDetailPage() {
                   </div>
                 )}
                 
-                {customerData.logo_url ? (
+                {customerData.logo_url && !logoLoadError ? (
                   <img
                     src={customerData.logo_url}
                     alt={customerData.name}
                     className="w-16 h-16 rounded-full object-cover"
-                    onError={(e) => {
-                      // Hide the image and show fallback if there's an error
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const parent = target.parentElement;
-                      if (parent) {
-                        parent.innerHTML = `<span class="text-2xl font-semibold text-gray-600">${customerData.name.charAt(0).toUpperCase()}</span>`;
-                      }
-                    }}
+                    onError={() => setLogoLoadError(true)}
                   />
                 ) : (
                   <span className="text-2xl font-semibold text-gray-600">

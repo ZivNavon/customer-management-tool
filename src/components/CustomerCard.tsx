@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Customer } from '@/lib/api';
 import { PencilIcon, TrashIcon, EnvelopeIcon, PhoneIcon, CalendarIcon } from '@heroicons/react/24/outline';
@@ -14,6 +15,7 @@ interface CustomerCardProps {
 
 export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) {
   const { t } = useTranslation();
+  const [logoLoadError, setLogoLoadError] = useState(false);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -172,22 +174,14 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
                 </div>
               )}
               
-              {customer.logo_url ? (
+              {customer.logo_url && !logoLoadError ? (
                 <Image
                   src={customer.logo_url}
                   alt={customer.name}
                   width={56}
                   height={56}
                   className="w-14 h-14 rounded-2xl object-cover"
-                  onError={(e) => {
-                    // Hide the image and show fallback if there's an error
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      parent.innerHTML = `<span class="text-xl font-bold text-white">${customer.name.charAt(0).toUpperCase()}</span>`;
-                    }
-                  }}
+                  onError={() => setLogoLoadError(true)}
                 />
               ) : (
                 <span className="text-xl font-bold text-white">

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { penteraAI, type AIAnalysisResult } from '@/lib/penteraAI-server';
 import { settingsManager } from '@/lib/settingsManager';
@@ -26,8 +26,6 @@ interface AISummaryProps {
   notes: string;
   screenshots: (File | string)[];
   onSummaryGenerated?: (summary: AIAnalysisResult) => void;
-  onSave?: (summary: AIAnalysisResult) => void;
-  onNotesUpdate?: (updatedNotes: string) => void; // New prop to update notes
 }
 
 export function AISummary({ 
@@ -36,9 +34,7 @@ export function AISummary({
   customerName, 
   notes, 
   screenshots, 
-  onSummaryGenerated,
-  onSave,
-  onNotesUpdate
+  onSummaryGenerated 
 }: AISummaryProps) {
   const _queryClient = useQueryClient();
   const [analysisResult, setAnalysisResult] = useState<AIAnalysisResult | null>(null);
@@ -46,48 +42,6 @@ export function AISummary({
   const [showContext, setShowContext] = useState(false);
   const [error, setError] = useState<string>('');
   const [isConfigured, setIsConfigured] = useState(settingsManager.isConfigured());
-  const [editingEmail, setEditingEmail] = useState(false);
-  const [editedEmail, setEditedEmail] = useState('');
-
-  // Sync editedEmail when analysis result changes
-  useEffect(() => {
-    if (analysisResult?.emailDraft) {
-      setEditedEmail(analysisResult.emailDraft);
-    }
-  }, [analysisResult?.emailDraft]);
-
-  // Format AI summary for notes - only email draft
-  const formatAISummaryForNotes = (summary: AIAnalysisResult) => {
-    if (!summary.emailDraft) {
-      return ''; // No email draft, nothing to add
-    }
-
-    // Clean up email draft - remove JSON formatting if present
-    let emailText = summary.emailDraft;
-    
-    // If the email is wrapped in JSON format, extract just the content
-    if (emailText.includes('"emailDraft"') || emailText.startsWith('{')) {
-      try {
-        const parsed = JSON.parse(emailText);
-        emailText = parsed.emailDraft || parsed.email || emailText;
-      } catch {
-        // If parsing fails, try to extract text between quotes
-        const match = emailText.match(/["']([^"']*צוות[^"']*)["']/);
-        if (match) {
-          emailText = match[1];
-        }
-      }
-    }
-    
-    // Clean up any remaining JSON artifacts
-    emailText = emailText
-      .replace(/^["']|["']$/g, '') // Remove surrounding quotes
-      .replace(/\\n/g, '\n') // Convert escaped newlines
-      .replace(/\\t/g, '\t') // Convert escaped tabs
-      .trim();
-      
-    return `\n\nEMAIL DRAFT:\n${emailText}\n\n`;
-  };
 
   const generateAISummary = async () => {
     // Refresh configuration status
@@ -114,13 +68,6 @@ export function AISummary({
       
       setAnalysisResult(result);
       onSummaryGenerated?.(result);
-      
-      // Immediately append AI summary to notes
-      if (onNotesUpdate) {
-        const formattedSummary = formatAISummaryForNotes(result);
-        const updatedNotes = notes + formattedSummary;
-        onNotesUpdate(updatedNotes);
-      }
       
     } catch (error) {
       console.error('Failed to generate AI summary:', error);
@@ -285,20 +232,9 @@ export function AISummary({
       {/* Generated Analysis Results */}
       {analysisResult && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center">
-              <CheckCircleIcon className="h-5 w-5 text-green-600 mr-2" />
-              <span className="font-medium text-green-800">AI Analysis Complete</span>
-            </div>
-            {onSave && (
-              <button
-                onClick={() => analysisResult && onSave(analysisResult)}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium flex items-center gap-2"
-              >
-                <CheckCircleIcon className="h-4 w-4" />
-                Save Meeting
-              </button>
-            )}
+          <div className="flex items-center mb-3">
+            <CheckCircleIcon className="h-5 w-5 text-green-600 mr-2" />
+            <span className="font-medium text-green-800">AI Analysis Complete</span>
           </div>
 
           {/* Summary */}
@@ -368,128 +304,13 @@ export function AISummary({
 
           {/* Email Draft */}
           <div className="bg-white rounded-lg p-4 border border-indigo-200">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center">
-                <EnvelopeIcon className="h-4 w-4 text-indigo-600 mr-2" />
-                <h4 className="font-medium text-indigo-800">Hebrew Email Draft</h4>
-              </div>
-              <div className="flex items-center space-x-2">
-                {!editingEmail ? (
-                  <button
-                    onClick={() => setEditingEmail(true)}
-                    className="px-2 py-1 text-xs bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-                  >
-                    ✏️ Edit
-                  </button>
-                ) : (
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => {
-                        if (analysisResult) {
-                          setAnalysisResult({
-                            ...analysisResult,
-                            emailDraft: editedEmail
-                          });
-                          onSummaryGenerated?.({
-                            ...analysisResult,
-                            emailDraft: editedEmail
-                          });
-                        }
-                        setEditingEmail(false);
-                      }}
-                      className="px-2 py-1 text-xs bg-green-600 text-white rounded-md hover:bg-green-700"
-                    >
-                      💾 Apply
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditedEmail(analysisResult?.emailDraft || '');
-                        setEditingEmail(false);
-                      }}
-                      className="px-2 py-1 text-xs bg-gray-500 text-white rounded-md hover:bg-gray-600"
-                    >
-                      ❌ Cancel
-                    </button>
-                  </div>
-                )}
-              </div>
+            <div className="flex items-center mb-2">
+              <EnvelopeIcon className="h-4 w-4 text-indigo-600 mr-2" />
+              <h4 className="font-medium text-indigo-800">Hebrew Email Draft</h4>
             </div>
-            
-            <div className="text-sm text-gray-700 bg-indigo-50 p-3 rounded border">
-              {editingEmail ? (
-                <textarea
-                  value={editedEmail}
-                  onChange={(e) => setEditedEmail(e.target.value)}
-                  className="w-full min-h-[200px] text-sm text-gray-700 bg-white border border-gray-300 rounded-md p-2 resize-vertical"
-                  style={{ direction: 'rtl', textAlign: 'right', fontFamily: 'monospace' }}
-                  placeholder="Edit the email content..."
-                />
-              ) : (
-                <div className="whitespace-pre-wrap font-mono text-right" dir="rtl">
-                  {(() => {
-                    // Clean up email display - remove JSON formatting if present
-                    let emailText = analysisResult.emailDraft || '';
-                    
-                    // If the email is wrapped in JSON format, extract just the content
-                    if (emailText.includes('"emailDraft"') || emailText.startsWith('{')) {
-                      try {
-                        const parsed = JSON.parse(emailText);
-                        emailText = parsed.emailDraft || parsed.email || emailText;
-                      } catch {
-                        // If parsing fails, try to extract text between quotes
-                        const match = emailText.match(/["']([^"']*צוות[^"']*)["']/);
-                        if (match) {
-                          emailText = match[1];
-                        }
-                      }
-                    }
-                    
-                    // Clean up any remaining JSON artifacts
-                    return emailText
-                      .replace(/^["']|["']$/g, '') // Remove surrounding quotes
-                      .replace(/\\n/g, '\n') // Convert escaped newlines
-                      .replace(/\\t/g, '\t') // Convert escaped tabs
-                      .trim();
-                  })()}
-                </div>
-              )}
+            <div className="text-sm text-gray-700 bg-indigo-50 p-3 rounded border whitespace-pre-wrap font-mono text-right" dir="rtl">
+              {analysisResult.emailDraft}
             </div>
-            
-            {/* Copy Email Button */}
-            {!editingEmail && (
-              <button
-                onClick={() => {
-                  // Extract clean email text (remove any JSON formatting if present)
-                  let emailText = analysisResult.emailDraft || '';
-                  
-                  // If the email is wrapped in JSON format, extract just the content
-                  if (emailText.includes('"emailDraft"') || emailText.startsWith('{')) {
-                    try {
-                      const parsed = JSON.parse(emailText);
-                      emailText = parsed.emailDraft || parsed.email || emailText;
-                    } catch {
-                      // If parsing fails, try to extract text between quotes
-                      const match = emailText.match(/["']([^"']*צוות[^"']*)["']/);
-                      if (match) {
-                        emailText = match[1];
-                      }
-                    }
-                  }
-                  
-                  // Clean up any remaining JSON artifacts
-                  emailText = emailText
-                    .replace(/^["']|["']$/g, '') // Remove surrounding quotes
-                    .replace(/\\n/g, '\n') // Convert escaped newlines
-                    .replace(/\\t/g, '\t') // Convert escaped tabs
-                    .trim();
-                    
-                  navigator.clipboard.writeText(emailText);
-                }}
-                className="mt-2 inline-flex items-center px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700"
-              >
-                📋 Copy Email
-              </button>
-            )}
           </div>
           
           <div className="mt-4 flex justify-between items-center">

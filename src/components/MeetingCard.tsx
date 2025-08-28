@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { meetingApi } from '@/lib/api';
 import { mockApi } from '@/lib/mockApi';
 import { detectLanguage, getTextDirection, languageNames } from '@/lib/i18n';
+import { AISummary } from './AISummary';
 import type { Meeting } from '@/types';
 import {
   CalendarIcon,
@@ -15,7 +16,8 @@ import {
   PencilIcon,
   TrashIcon,
   ChevronDownIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 
 interface MeetingCardProps {
@@ -27,6 +29,7 @@ export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAISummary, setShowAISummary] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: async (meetingId: string) => {
@@ -43,28 +46,6 @@ export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
       setShowDeleteConfirm(false);
     },
   });
-
-  // Helper function to safely create object URL
-  const getSafeImageSrc = (screenshot: string | File): string | null => {
-    try {
-      if (typeof screenshot === 'string') {
-        // Check if it's a valid URL or base64 string
-        if (screenshot.startsWith('http') || screenshot.startsWith('data:image/')) {
-          return screenshot;
-        }
-        // If it's not a valid image string, return null
-        return null;
-      } else if (screenshot instanceof File) {
-        return URL.createObjectURL(screenshot);
-      } else {
-        console.warn('Invalid screenshot format:', typeof screenshot);
-        return null;
-      }
-    } catch (error) {
-      console.error('Error creating object URL:', error);
-      return null;
-    }
-  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -104,7 +85,7 @@ export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
               </span>
               <span className="flex items-center">
                 <ClockIcon className="h-4 w-4 mr-1" />
-                {formatTime(meeting.meeting_date)} ({meeting.duration || 60} min)
+                {formatTime(meeting.meeting_date)} ({meeting.duration || 45} min)
               </span>
               {meeting.participants && meeting.participants.length > 0 && (
                 <span className="flex items-center">
@@ -135,6 +116,13 @@ export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
 
           {/* Action buttons */}
           <div className="flex items-center space-x-2 ml-4">
+            <button
+              onClick={() => setShowAISummary(!showAISummary)}
+              className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-md"
+              title="AI Summary"
+            >
+              <SparklesIcon className="h-4 w-4" />
+            </button>
             <button
               onClick={() => onEdit(meeting)}
               className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md"
@@ -251,39 +239,38 @@ export function MeetingCard({ meeting, onEdit }: MeetingCardProps) {
                 Screenshots ({meeting.screenshots.length})
               </h4>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {meeting.screenshots.map((screenshot: string | File, index: number) => {
-                  const imageSrc = getSafeImageSrc(screenshot);
-                  return (
-                    <div key={index} className="relative">
-                      {imageSrc ? (
-                        <img
-                          src={imageSrc}
-                          alt={`Screenshot ${index + 1}`}
-                          className="w-full h-20 object-cover rounded-md border cursor-pointer hover:opacity-75"
-                          onClick={() => {
-                            try {
-                              const img = new Image();
-                              img.src = imageSrc;
-                              const newWindow = window.open();
-                              if (newWindow) {
-                                newWindow.document.write(`<img src="${imageSrc}" style="max-width: 100%; height: auto;" />`);
-                              }
-                            } catch (error) {
-                              console.error('Error opening screenshot:', error);
-                            }
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-20 bg-gray-200 dark:bg-gray-600 rounded-md border flex items-center justify-center text-xs text-gray-500">
-                          Image Error
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {meeting.screenshots.map((screenshot: string | File, index: number) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={typeof screenshot === 'string' ? screenshot : URL.createObjectURL(screenshot)}
+                      alt={`Screenshot ${index + 1}`}
+                      className="w-full h-20 object-cover rounded-md border cursor-pointer hover:opacity-75"
+                      onClick={() => {
+                        // Open in new tab for full view
+                        const img = new Image();
+                        img.src = typeof screenshot === 'string' ? screenshot : URL.createObjectURL(screenshot);
+                        const newWindow = window.open();
+                        newWindow?.document.write(img.outerHTML);
+                      }}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* AI Summary Section */}
+      {showAISummary && (
+        <div className="border-t border-gray-200 p-4">
+          <AISummary
+            meetingId={meeting.id}
+            customerId={meeting.customer_id}
+            customerName={meeting.customer?.name || 'Customer'}
+            notes={meeting.notes || ''}
+            screenshots={meeting.screenshots || []}
+          />
         </div>
       )}
 

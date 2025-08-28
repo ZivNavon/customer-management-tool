@@ -35,8 +35,15 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
   });
   
   const [contacts, setContacts] = useState<Contact[]>(
-    customer?.contacts && customer.contacts.length > 0 
-      ? customer.contacts 
+    (customer?.contacts && customer.contacts.length > 0)
+      ? customer.contacts.map(c => ({
+          id: (c as any).id,
+          name: (c as any).name || '',
+          title: (c as any).title || '',
+          email: (c as any).email || '',
+          phone: (c as any).phone || '',
+          notes: (c as any).notes || ''
+        }))
       : [{ name: '', title: '', email: '', phone: '', notes: '' }]
   );
   
@@ -55,8 +62,15 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
         last_meeting_date: customer.last_meeting_date || '',
       });
       setContacts(
-        customer.contacts && customer.contacts.length > 0 
-          ? customer.contacts 
+        (customer.contacts && customer.contacts.length > 0)
+          ? customer.contacts.map(c => ({
+              id: (c as any).id,
+              name: (c as any).name || '',
+              title: (c as any).title || '',
+              email: (c as any).email || '',
+              phone: (c as any).phone || '',
+              notes: (c as any).notes || ''
+            }))
           : [{ name: '', title: '', email: '', phone: '', notes: '' }]
       );
     }
@@ -325,7 +339,7 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
                       <label className="block text-xs font-medium text-gray-600">Name</label>
                       <input
                         type="text"
-                        value={contact.name}
+                        value={contact.name || ''}
                         onChange={(e) => handleContactChange(index, 'name', e.target.value)}
                         className="mt-1 block w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                       />
@@ -334,7 +348,7 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
                       <label className="block text-xs font-medium text-gray-600">Title</label>
                       <input
                         type="text"
-                        value={contact.title}
+                        value={contact.title || ''}
                         onChange={(e) => handleContactChange(index, 'title', e.target.value)}
                         className="mt-1 block w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                       />
@@ -343,7 +357,7 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
                       <label className="block text-xs font-medium text-gray-600">Email</label>
                       <input
                         type="email"
-                        value={contact.email}
+                        value={contact.email || ''}
                         onChange={(e) => handleContactChange(index, 'email', e.target.value)}
                         className="mt-1 block w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                       />
@@ -352,7 +366,7 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
                       <label className="block text-xs font-medium text-gray-600">Phone</label>
                       <input
                         type="tel"
-                        value={contact.phone}
+                        value={contact.phone || ''}
                         onChange={(e) => handleContactChange(index, 'phone', e.target.value)}
                         className="mt-1 block w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                       />
@@ -362,7 +376,7 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
                   <div className="mt-3">
                     <label className="block text-xs font-medium text-gray-600">Notes</label>
                     <textarea
-                      value={contact.notes}
+                      value={contact.notes || ''}
                       onChange={(e) => handleContactChange(index, 'notes', e.target.value)}
                       rows={2}
                       className="mt-1 block w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"

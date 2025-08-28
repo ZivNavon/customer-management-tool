@@ -347,7 +347,7 @@ export const mockApi = {
         customer_id: data.customer_id as string,
         title: data.title as string,
         meeting_date: data.meeting_date as string,
-        duration: (data.duration as number) || 60,
+  duration: (data.duration as number) || 45,
         participants: (data.participants as string[]) || [],
         notes: (data.notes as string) || '',
         action_items: (data.action_items as string[]) || [],

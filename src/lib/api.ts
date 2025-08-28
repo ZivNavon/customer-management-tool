@@ -185,3 +185,27 @@ export const taskApi = {
   getCompleted: (customerId?: string) =>
     api.get('/tasks/completed', { params: customerId ? { customer_id: customerId } : {} }),
 };
+
+// Group customer actions into sub-actions
+interface CustomerAction {
+  customerId: string;
+  actionId: string;
+  description: string;
+}
+
+export function groupCustomerActions(actions: CustomerAction[]): { customerId: string; subActions: CustomerAction[] }[] {
+  const groupedActions: Record<string, CustomerAction[]> = {};
+
+  actions.forEach((action: CustomerAction) => {
+    const customerId = action.customerId;
+    if (!groupedActions[customerId]) {
+      groupedActions[customerId] = [];
+    }
+    groupedActions[customerId].push(action);
+  });
+
+  return Object.entries(groupedActions).map(([customerId, subActions]) => ({
+    customerId,
+    subActions,
+  }));
+}

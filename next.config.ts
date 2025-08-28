@@ -13,7 +13,8 @@ const nextConfig: NextConfig = {
       'encrypted-tbn3.gstatic.com',
       'images.unsplash.com',
       'via.placeholder.com',
-      'picsum.photos'
+      'picsum.photos',
+      'media.licdn.com'
     ],
   },
 };
